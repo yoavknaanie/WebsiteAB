@@ -495,6 +495,7 @@
 
 // export default Questionnaire
 import React, { useState, useEffect } from 'react'
+import { useSubmissions } from '../contexts/SubmissionsContext'
 
 // ======================= CONSTANTS =======================
 const availabilityOptions = ['Multiple daily', 'Once daily', 'Every couple of days', 'Weekly', 'Other']
@@ -517,7 +518,7 @@ function Questionnaire() {
     availability: '', otherAvailability: '', communication: [],
     communicationOther: '', constraints: ''
   })
-  const [submissions, setSubmissions] = useState([])
+  // submissions are stored in global context
   const [hasConstraints, setHasConstraints] = useState(false)
 
   // ------------------- DERIVED -------------------
@@ -559,9 +560,12 @@ function Questionnaire() {
     setFormData({ ...formData, lookingFor: updated })
   }
 
+  const { addSubmission } = useSubmissions()
+
   const handleSubmit = (e) => {
     e.preventDefault()
-    setSubmissions([...submissions, formData])
+    // add to shared submissions store
+    addSubmission(formData)
     setFormData({
       title: '', age: null, gender: '', otherGender: '', timezone: formData.timezone,
       description: '', goals: '', lookingFor: ['', '', '', '', ''],
@@ -734,24 +738,7 @@ function Questionnaire() {
         <button type="submit" className="btn">Submit</button>
       </form>
 
-      {/* Submissions */}
-      {submissions.length > 0 && (
-        <div className="submissions">
-          <h3>My Submissions</h3>
-          {submissions.map((sub, index) => (
-            <div key={index} className="card">
-              <strong>{sub.title}</strong> — {sub.description} <br />
-              Age: {sub.age}, Gender: {sub.gender === 'Other' ? sub.otherGender : sub.gender} <br />
-              Goals: {sub.goals} <br />
-              Looking for: {sub.lookingFor.filter(Boolean).join(', ')} <br />
-              Availability: {sub.availability === 'Other' ? sub.otherAvailability : sub.availability} <br />
-              Communication: {sub.communication.join(', ')} <br />
-              Constraints: {sub.constraints} <br />
-              Timezone: {sub.timezone}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Submission is added to the Submissions Board (see /submissions) */}
     </section>
   )
 }
