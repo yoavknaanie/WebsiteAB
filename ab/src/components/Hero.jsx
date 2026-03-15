@@ -15,15 +15,14 @@ function Hero() {
       </p>
 
       <div style={styles.actions}>
-        <button style={styles.primary} onClick={() => navigate('./SignUp')}>Get Started</button>
-        <button
-          style={styles.primary}
-          onClick={() => navigate('/questionnaire')}
-        >
-          Go to Questionnaire
-        </button>
+        <button style={styles.primary} onClick={() => navigate('/signup')}>Get Started</button>
+        <button style={styles.primary} onClick={() => navigate('/questionnaire')}>Questionnaire</button>
+        <button style={styles.primary} onClick={() => navigate('/submissions')}>Submissions</button>
+        <button style={styles.primary} onClick={() => navigate('/myboard')}>My Board</button>
+        <button style={styles.primary} onClick={() => navigate('/chats')}>Chats</button>
+        <button style={styles.secondary} onClick={() => navigate('/login')}>Log in</button>
         <a href="#how-it-works" style={styles.secondary}>
-            How it works
+          How it works
         </a>
       </div>
     </section>

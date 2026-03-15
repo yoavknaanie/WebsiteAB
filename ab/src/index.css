@@ -121,6 +121,9 @@ input, textarea, select, button {
   transition: background-color 0.3s;
 }
 
+/* Small modifier for compact buttons while keeping base btn styles */
+/* small button modifier was removed per user request */
+
 /* Communication / checkboxes */
 .checkbox-group {
   display: flex;
@@ -193,6 +196,13 @@ input, textarea, select, button {
   position: relative;
   width: 46px;
   height: 24px;
+}
+
+/* Required field star */
+.req {
+  color: #d32f2f; /* red */
+  margin-left: 0.25rem;
+  font-weight: 700;
 }
 
 .switch-input {
