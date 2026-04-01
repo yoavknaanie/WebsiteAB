@@ -200,9 +200,9 @@ input, textarea, select, button {
 
 /* Required field star */
 .req {
-  color: #d32f2f; /* red */
+  color: #d32f2fb7; /* red */
   margin-left: 0.25rem;
-  font-weight: 700;
+  font-weight: 300;
 }
 
 .switch-input {
