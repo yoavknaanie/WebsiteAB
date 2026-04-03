@@ -2,6 +2,8 @@
 
 // export default Questionnaire
 import React, { useState, useEffect } from 'react'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { auth, db } from '../firebase'
 
 // ======================= CONSTANTS =======================
 const availabilityOptions = ['Multiple daily', 'Once daily', 'Every couple of days', 'Weekly', 'Other']
@@ -98,7 +100,7 @@ function Questionnaire() {
     setFormData({ ...formData, lookingFor: updated })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitted(true)
   if (!formData.title) return  // stops submission if empty
@@ -109,7 +111,22 @@ function Questionnaire() {
       return
     }
 
-    setSubmissions([...submissions, formData])
+    await addDoc(collection(db, 'submissions'), {
+      userId: auth.currentUser.uid,
+      title: formData.title,
+      age: formData.age,
+      gender: formData.gender,
+      timezone: formData.timezone,
+      description: formData.description,
+      goals: formData.goals,
+      lookingFor: formData.lookingFor.filter(Boolean),
+      availability: formData.availability,
+      otherAvailability: formData.otherAvailability,
+      communication: formData.communication,
+      communicationOther: formData.communicationOther,
+      constraints: formData.constraints,
+      createdAt: serverTimestamp()
+    })
     setFormData({
       title: '', age: null, gender: '', otherGender: '', timezone: formData.timezone,
       description: '', goals: '', lookingFor: ['', '', '', '', ''],
