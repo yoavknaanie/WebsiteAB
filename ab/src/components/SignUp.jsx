@@ -43,7 +43,17 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { auth } from '../firebase'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { auth, db } from '../firebase'
+
+const friendlyError = (code) => {
+  switch (code) {
+    case 'auth/email-already-in-use': return 'An account with this email already exists.'
+    case 'auth/invalid-email': return 'Please enter a valid email address.'
+    case 'auth/weak-password': return 'Password must be at least 6 characters.'
+    default: return 'Something went wrong. Please try again.'
+  }
+}
 
 function Signup() {
   const navigate = useNavigate()
@@ -65,10 +75,14 @@ function Signup() {
 
     try {
       setLoading(true)
-      await createUserWithEmailAndPassword(auth, email, password)
-      navigate('/questionnaire') // 🔁 redirect after signup
+      const { user } = await createUserWithEmailAndPassword(auth, email, password)
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        createdAt: serverTimestamp(),
+      })
+      navigate('/questionnaire')
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err.code))
     } finally {
       setLoading(false)
     }
