@@ -42,18 +42,7 @@
 // export default Signup
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db } from '../firebase'
 
-const friendlyError = (code) => {
-  switch (code) {
-    case 'auth/email-already-in-use': return 'An account with this email already exists.'
-    case 'auth/invalid-email': return 'Please enter a valid email address.'
-    case 'auth/weak-password': return 'Password must be at least 6 characters.'
-    default: return 'Something went wrong. Please try again.'
-  }
-}
 
 function Signup() {
   const navigate = useNavigate()
@@ -75,14 +64,27 @@ function Signup() {
 
     try {
       setLoading(true)
-      const { user } = await createUserWithEmailAndPassword(auth, email, password)
-      await setDoc(doc(db, 'users', user.uid), {
-        email: user.email,
-        createdAt: serverTimestamp(),
+
+      // Send email + password to the backend as JSON
+      const response = await fetch('http://localhost:3000/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       })
+
+      const data = await response.json()
+
+      // If the server returned an error (e.g. duplicate email), show it
+      if (!response.ok) {
+        setError(data.error)
+        return
+      }
+
+      // Store the JWT token so future requests can prove who the user is
+      localStorage.setItem('token', data.token)
       navigate('/questionnaire')
     } catch (err) {
-      setError(friendlyError(err.code))
+      setError('Could not connect to the server. Please try again.')
     } finally {
       setLoading(false)
     }
