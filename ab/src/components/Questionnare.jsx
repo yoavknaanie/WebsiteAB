@@ -2,8 +2,7 @@
 
 // export default Questionnaire
 import React, { useState, useEffect } from 'react'
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db } from '../firebase'
+// TODO: replace Firebase submission with Express backend call (POST /submissions)
 
 // ======================= CONSTANTS =======================
 const availabilityOptions = ['Multiple daily', 'Once daily', 'Every couple of days', 'Weekly', 'Other']
@@ -111,22 +110,19 @@ function Questionnaire() {
       return
     }
 
-    await addDoc(collection(db, 'submissions'), {
-      userId: auth.currentUser.uid,
-      title: formData.title,
-      age: formData.age,
-      gender: formData.gender,
-      timezone: formData.timezone,
-      description: formData.description,
-      goals: formData.goals,
-      lookingFor: formData.lookingFor.filter(Boolean),
-      availability: formData.availability,
-      otherAvailability: formData.otherAvailability,
-      communication: formData.communication,
-      communicationOther: formData.communicationOther,
-      constraints: formData.constraints,
-      createdAt: serverTimestamp()
-    })
+    // TODO: send formData to Express backend (POST /submissions)
+    // fields to include:
+    //   userId         — from JWT token (extracted on the backend)
+    //   title          — formData.title
+    //   age            — formData.age
+    //   gender         — formData.gender (if 'Other', use formData.otherGender)
+    //   timezone       — formData.timezone
+    //   description    — formData.description
+    //   goals          — formData.goals
+    //   lookingFor     — formData.lookingFor.filter(Boolean)
+    //   availability   — formData.availability (if 'Other', use formData.otherAvailability)
+    //   communication  — formData.communication (if includes 'Other', also send formData.communicationOther)
+    //   constraints    — formData.constraints
     setFormData({
       title: '', age: null, gender: '', otherGender: '', timezone: formData.timezone,
       description: '', goals: '', lookingFor: ['', '', '', '', ''],

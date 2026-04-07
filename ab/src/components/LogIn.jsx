@@ -1,18 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { signInWithEmailAndPassword } from 'firebase/auth'
-import { auth } from '../firebase'
-
-const friendlyError = (code) => {
-  switch (code) {
-    case 'auth/user-not-found':
-    case 'auth/wrong-password':
-    case 'auth/invalid-credential': return 'Incorrect email or password.'
-    case 'auth/invalid-email': return 'Please enter a valid email address.'
-    case 'auth/too-many-requests': return 'Too many failed attempts. Please try again later.'
-    default: return 'Something went wrong. Please try again.'
-  }
-}
+// TODO: implement login with Express backend (POST /auth/login)
+// - send email + password to backend
+// - receive JWT token
+// - store token in localStorage
+// - navigate to /questionnaire
 
 function Login() {
   const navigate = useNavigate()
@@ -28,10 +20,10 @@ function Login() {
 
     try {
       setLoading(true)
-      await signInWithEmailAndPassword(auth, email, password)
+      // TODO: replace with Express backend call
       navigate('/questionnaire')
     } catch (err) {
-      setError(friendlyError(err.code))
+      setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
