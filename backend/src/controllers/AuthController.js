@@ -45,10 +45,20 @@ const users = []
 
 class AuthController {
   async signup(req, res) {
-    const { email, password } = req.body
+    const { email, password, confirmPassword } = req.body
 
-    if (!email || !password) {
+    if (!email || !password) { // actualy those are checked in the frontend
       return res.status(STATUS.BAD_REQUEST).json({ error: 'Email and password are required.' })
+    }
+
+    // validates format: must have characters before @, a domain, and a dot in the domain
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(STATUS.BAD_REQUEST).json({ error: 'Invalid email format.' })
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(STATUS.BAD_REQUEST).json({ error: 'Passwords do not match.' })
     }
 
     const existingUser = users.find((u) => u.email === email)
@@ -63,6 +73,28 @@ class AuthController {
     const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, { expiresIn: '7d' })
     console.log('Account created successfully:', newUser)
     return res.status(STATUS.CREATED).json({ message: 'Account created successfully.', token })
+  }
+
+  async login(req, res) {
+    const { email, password } = req.body
+
+    if (!email || !password) {
+      return res.status(STATUS.BAD_REQUEST).json({ error: 'Email and password are required.' })
+    }
+
+    const user = users.find((u) => u.email === email)
+    if (!user) {
+      return res.status(STATUS.UNAUTHORIZED).json({ error: 'Incorrect email or password.' })
+    }
+
+    // compare the plain password against the stored hash
+    const passwordMatch = await bcrypt.compare(password, user.password)
+    if (!passwordMatch) {
+      return res.status(STATUS.UNAUTHORIZED).json({ error: 'Incorrect email or password.' })
+    }
+
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' })
+    return res.status(STATUS.OK).json({ message: 'Logged in successfully.', token })
   }
 }
 
