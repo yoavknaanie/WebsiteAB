@@ -1,10 +1,5 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-// TODO: implement login with Express backend (POST /auth/login)
-// - send email + password to backend
-// - receive JWT token
-// - store token in localStorage
-// - navigate to /questionnaire
 
 function Login() {
   const navigate = useNavigate()
@@ -20,10 +15,24 @@ function Login() {
 
     try {
       setLoading(true)
-      // TODO: replace with Express backend call
+
+      const response = await fetch('http://localhost:3000/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error)
+        return
+      }
+
+      localStorage.setItem('token', data.token)
       navigate('/questionnaire')
     } catch (err) {
-      setError('Something went wrong. Please try again.')
+      setError('Could not connect to the server. Please try again.')
     } finally {
       setLoading(false)
     }
