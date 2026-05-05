@@ -1,0 +1,7 @@
+stars on field which are mandatory:
+timezone (set up time zones according to selected country) -> adding +- 3 hours or i dont mind
+Title
+Availability
+Prefared communication
+
+each required field which was not filled at time of submition, will have red frame.
