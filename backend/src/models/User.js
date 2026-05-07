@@ -2,9 +2,8 @@
  * User Model
  * ----------
  * Represents a user in the system.
- * Responsible for defining the structure of a user object.
- * In a future step, this will handle saving/loading from PostgreSQL.
- * For now, users are stored in memory (reset on server restart).
+ * Legacy plain JavaScript user shape.
+ * AuthController now persists users in PostgreSQL instead of this in-memory model.
  */
 
 class User {
