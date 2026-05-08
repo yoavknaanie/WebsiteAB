@@ -1,0 +1,21 @@
+ToDo:
+Username logic:
+    SignUp.jsx:
+        Validity check in frontend:
+        - user no longer then 30 characters.
+        - raise an informative error messsage if so.
+    Backend:
+        - if username is taken, return matching failed status.
+        - block requests from the user IP if it failed signing up 8 times.
+
+login logic:
+    backend:
+        - basic login logic
+        - block requests from the user IP if it failed loggin up 5 times.
+
+
+today 8.5.26:
+send the user name in json to the sign up.
+update the backend so it will save the user name in the users db.
+validate user name is not used.
+keep in mind in the code block multiple requests.
