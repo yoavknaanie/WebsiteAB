@@ -7,6 +7,7 @@ function Signup() {
   const navigate = useNavigate()
 
   const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -28,7 +29,7 @@ function Signup() {
       const response = await fetch('http://localhost:3000/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, confirmPassword }),
+        body: JSON.stringify({ username, email, password, confirmPassword }),
       })
 
       const data = await response.json()
@@ -56,6 +57,17 @@ function Signup() {
       <form onSubmit={handleSubmit}>
         {error && <p style={{ color: 'red' }}>{error}</p>}
 
+        <div className="form-field">
+          <label>Username</label>
+          <input
+            type="text"
+            required
+            className="form-input"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </div>
+        
         <div className="form-field">
           <label>Email</label>
           <input

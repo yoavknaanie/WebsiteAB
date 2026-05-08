@@ -35,6 +35,24 @@ const jwt = require('jsonwebtoken')
 const pool = require('../db/pool')
 
 const SALT_ROUNDS = 10
+const USERNAME_MIN_LENGTH = 3
+const USERNAME_MAX_LENGTH = 30
+
+const AUTH_MESSAGES = {
+  ACCOUNT_CREATED: 'Account created successfully.',
+  ACCOUNT_CREATE_FAILED: 'Could not create account.',
+  EMAIL_AND_PASSWORD_REQUIRED: 'Email and password are required.',
+  EMAIL_ALREADY_EXISTS: 'An account with this email already exists.',
+  INCORRECT_EMAIL_OR_PASSWORD: 'Incorrect email or password.',
+  INVALID_EMAIL: 'Invalid email format.',
+  LOGIN_FAILED: 'Could not log in.',
+  LOGIN_SUCCESS: 'Logged in successfully.',
+  PASSWORDS_DO_NOT_MATCH: 'Passwords do not match.',
+  USERNAME_REQUIRED: 'Username is required.',
+  USERNAME_TAKEN: 'Username is taken.',
+  USERNAME_TOO_SHORT: `Username must be at least ${USERNAME_MIN_LENGTH} characters.`,
+  USERNAME_TOO_LONG: `Username must be ${USERNAME_MAX_LENGTH} characters or less.`,
+}
 
 const STATUS = {
   OK: 200,
@@ -48,6 +66,107 @@ const STATUS = {
 }
 
 class AuthController {
+  #normalizeEmail(email) {
+    return email?.trim().toLowerCase()
+  }
+
+  #isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  #normalizeUsername(username) {
+    return username?.trim()
+  }
+
+  #validateUsername(username) {
+    if (!username) {
+      return AUTH_MESSAGES.USERNAME_REQUIRED
+    }
+
+    if (username.length < USERNAME_MIN_LENGTH) {
+      return AUTH_MESSAGES.USERNAME_TOO_SHORT
+    }
+
+    if (username.length > USERNAME_MAX_LENGTH) {
+      return AUTH_MESSAGES.USERNAME_TOO_LONG
+    }
+
+    return null
+  }
+
+  #validateSignupInput({ username, email, password, confirmPassword }) {
+    const usernameError = this.#validateUsername(username)
+    if (usernameError) {
+      return usernameError
+    }
+
+    if (!email || !password) {
+      return AUTH_MESSAGES.EMAIL_AND_PASSWORD_REQUIRED
+    }
+
+    if (!this.#isValidEmail(email)) {
+      return AUTH_MESSAGES.INVALID_EMAIL
+    }
+
+    if (password !== confirmPassword) {
+      return AUTH_MESSAGES.PASSWORDS_DO_NOT_MATCH
+    }
+
+    return null
+  }
+
+  #getSignupInput(body) {
+    return {
+      username: this.#normalizeUsername(body.username),
+      email: this.#normalizeEmail(body.email),
+      password: body.password,
+      confirmPassword: body.confirmPassword,
+    }
+  }
+
+  async #isUsernameTaken(username) {
+    const result = await pool.query(
+      'SELECT 1 FROM users WHERE username = $1',
+      [username],
+    )
+
+    return result.rowCount > 0
+  }
+
+  async #createUser({ username, email, password }) {
+    // Store only the bcrypt hash. Never save the plain password in the database.
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS)
+    const result = await pool.query(
+      `
+        INSERT INTO users (username, email, password_hash)
+        VALUES ($1, $2, $3)
+        RETURNING id, username, email, created_at
+      `,
+      [username, email, hashedPassword],
+    )
+
+    return result.rows[0]
+  }
+
+  #createToken(userId) {
+    return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' })
+  }
+
+  #handleSignupError(error, res) {
+    // PostgreSQL unique_violation. The database has UNIQUE constraints for username and email.
+    if (error.code === '23505') {
+      if (error.constraint?.includes('username')) {
+        return res.status(STATUS.CONFLICT).json({ error: AUTH_MESSAGES.USERNAME_TAKEN })
+      }
+
+      return res.status(STATUS.CONFLICT).json({ error: AUTH_MESSAGES.EMAIL_ALREADY_EXISTS })
+    }
+
+    console.error('Signup failed:', error)
+    return res.status(STATUS.SERVER_ERROR).json({ error: AUTH_MESSAGES.ACCOUNT_CREATE_FAILED })
+  }
+
   /**
    * POST /auth/signup
    *
@@ -94,47 +213,29 @@ class AuthController {
    * - 500 when account creation fails for another server/database reason.
    */
   async signup(req, res) {
-    const { password, confirmPassword } = req.body
-    const email = req.body.email?.trim().toLowerCase()
+    const signupInput = this.#getSignupInput(req.body)
 
-    if (!email || !password) {
-      return res.status(STATUS.BAD_REQUEST).json({ error: 'Email and password are required.' })
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return res.status(STATUS.BAD_REQUEST).json({ error: 'Invalid email format.' })
-    }
-
-    if (password !== confirmPassword) {
-      return res.status(STATUS.BAD_REQUEST).json({ error: 'Passwords do not match.' })
+    const validationError = this.#validateSignupInput(signupInput)
+    if (validationError) {
+      return res.status(STATUS.BAD_REQUEST).json({ error: validationError })
     }
 
     try {
-      // Store only the bcrypt hash. Never save the plain password in the database.
-      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS)
-      const result = await pool.query(
-        `
-          INSERT INTO users (email, password_hash)
-          VALUES ($1, $2)
-          RETURNING id, email, created_at
-        `,
-        [email, hashedPassword],
-      )
-
-      const newUser = result.rows[0]
-      const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, { expiresIn: '7d' })
-
-      console.log('Account created successfully:', { id: newUser.id, email: newUser.email })
-      return res.status(STATUS.CREATED).json({ message: 'Account created successfully.', token })
-    } catch (error) {
-      // PostgreSQL unique_violation. The users.email column has a UNIQUE constraint.
-      if (error.code === '23505') {
-        return res.status(STATUS.CONFLICT).json({ error: 'An account with this email already exists.' })
+      if (await this.#isUsernameTaken(signupInput.username)) {
+        return res.status(STATUS.CONFLICT).json({ error: AUTH_MESSAGES.USERNAME_TAKEN })
       }
 
-      console.error('Signup failed:', error)
-      return res.status(STATUS.SERVER_ERROR).json({ error: 'Could not create account.' })
+      const newUser = await this.#createUser(signupInput)
+      const token = this.#createToken(newUser.id)
+
+      console.log(AUTH_MESSAGES.ACCOUNT_CREATED, {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+      })
+      return res.status(STATUS.CREATED).json({ message: AUTH_MESSAGES.ACCOUNT_CREATED, token })
+    } catch (error) {
+      return this.#handleSignupError(error, res)
     }
   }
 
@@ -170,7 +271,7 @@ class AuthController {
     const email = req.body.email?.trim().toLowerCase()
 
     if (!email || !password) {
-      return res.status(STATUS.BAD_REQUEST).json({ error: 'Email and password are required.' })
+      return res.status(STATUS.BAD_REQUEST).json({ error: AUTH_MESSAGES.EMAIL_AND_PASSWORD_REQUIRED })
     }
 
     try {
@@ -181,20 +282,20 @@ class AuthController {
 
       const user = result.rows[0]
       if (!user) {
-        return res.status(STATUS.UNAUTHORIZED).json({ error: 'Incorrect email or password.' })
+        return res.status(STATUS.UNAUTHORIZED).json({ error: AUTH_MESSAGES.INCORRECT_EMAIL_OR_PASSWORD })
       }
 
       // bcrypt.compare hashes the submitted password and checks it against password_hash.
       const passwordMatch = await bcrypt.compare(password, user.password_hash)
       if (!passwordMatch) {
-        return res.status(STATUS.UNAUTHORIZED).json({ error: 'Incorrect email or password.' })
+        return res.status(STATUS.UNAUTHORIZED).json({ error: AUTH_MESSAGES.INCORRECT_EMAIL_OR_PASSWORD })
       }
 
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' })
-      return res.status(STATUS.OK).json({ message: 'Logged in successfully.', token })
+      return res.status(STATUS.OK).json({ message: AUTH_MESSAGES.LOGIN_SUCCESS, token })
     } catch (error) {
       console.error('Login failed:', error)
-      return res.status(STATUS.SERVER_ERROR).json({ error: 'Could not log in.' })
+      return res.status(STATUS.SERVER_ERROR).json({ error: AUTH_MESSAGES.LOGIN_FAILED })
     }
   }
 }
