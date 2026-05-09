@@ -276,7 +276,7 @@ class AuthController {
 
     try {
       const result = await pool.query(
-        'SELECT id, email, password_hash FROM users WHERE email = $1',
+        'SELECT id, username, email, password_hash FROM users WHERE email = $1',
         [email],
       )
 
@@ -292,7 +292,11 @@ class AuthController {
       }
 
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' })
-      return res.status(STATUS.OK).json({ message: AUTH_MESSAGES.LOGIN_SUCCESS, token })
+      return res.status(STATUS.OK).json({
+        message: AUTH_MESSAGES.LOGIN_SUCCESS,
+        token,
+        username: user.username,
+      })
     } catch (error) {
       console.error('Login failed:', error)
       return res.status(STATUS.SERVER_ERROR).json({ error: AUTH_MESSAGES.LOGIN_FAILED })
