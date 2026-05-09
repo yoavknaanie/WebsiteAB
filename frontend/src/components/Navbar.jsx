@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom"
 
 function Navbar() {
   const navigate = useNavigate()
-  
+  const username = localStorage.getItem('username')
+  const isLoggedIn = Boolean(username)
+
   const goToHero = () => {
     // Navigate to "/" and scroll to hero after page loads
     navigate('/', { replace: false }) // go to home page
@@ -18,7 +20,13 @@ function Navbar() {
       <div style={styles.logo} onClick={goToHero}>
         Accountabuddy
       </div>
-      <button style={styles.button} onClick={() => navigate('/login')}>Log In</button>
+      <button
+        style={styles.button}
+        onClick={isLoggedIn ? undefined : () => navigate('/login')}
+        disabled={isLoggedIn}
+      >
+        {isLoggedIn ? username : 'Log In'}
+      </button>
     </nav>
   )
 }

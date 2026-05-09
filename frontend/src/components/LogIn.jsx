@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 
+const SERVER_ERROR = 'Could not connect to the server. Please try again.'
+const LOGIN_ERROR = 'Could not log in. Please try again.'
+const LOGIN_ROUTE = 'http://localhost:3000/auth/login'
+
 function Login() {
   const navigate = useNavigate()
 
@@ -16,23 +20,30 @@ function Login() {
     try {
       setLoading(true)
 
-      const response = await fetch('http://localhost:3000/auth/login', {
+      const response = await fetch(LOGIN_ROUTE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       })
 
-      const data = await response.json()
+      let data = {}
+
+      try {
+        data = await response.json()
+      } catch {
+        data = {}
+      }
 
       if (!response.ok) {
-        setError(data.error)
+        setError(data.error || data.message || LOGIN_ERROR)
         return
       }
 
       localStorage.setItem('token', data.token)
-      navigate('/questionnaire')
+      localStorage.setItem('username', data.username)
+      navigate('/questionnaire') // todo: maybe navigate to dashboard instead?
     } catch (err) {
-      setError('Could not connect to the server. Please try again.')
+      setError(SERVER_ERROR)
     } finally {
       setLoading(false)
     }
@@ -68,7 +79,7 @@ function Login() {
         </div>
 
         <button className="btn" disabled={loading}>
-          {loading ? 'Logging in…' : 'Log In'}
+          {loading ? 'Logging in...' : 'Log In'}
         </button>
 
         <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.95rem' }}>
