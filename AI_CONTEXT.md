@@ -56,13 +56,16 @@ Frontend:
 - `frontend/src/App.jsx` - route table and top-level layout. Always renders `Navbar`.
 - `frontend/src/index.css` and `frontend/src/App.css` - global styling.
 - `frontend/src/contexts/SubmissionsContext.jsx` - localStorage-backed data layer for submissions, requests, conversations, messages, and anonymous viewer id.
-- `frontend/src/components/SignUp.jsx` - signup form with username text input, email input, password, and confirm password. Calls `POST http://localhost:3000/auth/signup` with `{ username, email, password, confirmPassword }`, stores JWT in `localStorage.token`, and navigates to `/questionnaire`.
-- `frontend/src/components/LogIn.jsx` - login form, calls `POST http://localhost:3000/auth/login`, stores JWT in `localStorage.token`, navigates to `/questionnaire`.
+- `frontend/src/components/SignUp.jsx` - signup form with username text input, email input, password, and confirm password. Calls `POST http://localhost:3000/auth/signup` with `{ username, email, password, confirmPassword }`, stores JWT in `localStorage.token`, stores the submitted username in `localStorage.username`, and navigates to `/questionnaire`.
+- `frontend/src/components/LogIn.jsx` - login form, calls `POST http://localhost:3000/auth/login`, stores JWT in `localStorage.token`, stores returned username in `localStorage.username`, and navigates to `/questionnaire`.
 - `frontend/src/components/Questionnare.jsx` - questionnaire form. Filename is misspelled as `Questionnare`. It collects ticket/submission fields but currently does not call backend or context on submit.
 - `frontend/src/components/SubmissionsBoard.jsx` - browses and filters submissions from context; can send/cancel connection requests.
 - `frontend/src/components/MyBoard.jsx` - shows current viewer submissions and sent requests; accepts/cancels requests and includes a chat box for accepted requests.
 - `frontend/src/components/Chats.jsx` - lists active conversations for the current viewer and allows sending local messages.
-- `frontend/src/components/Navbar.jsx`, `Hero.jsx`, `HowItWorks.jsx`, `Footer.jsx`, `Landing.jsx` - navigation and landing/marketing UI.
+- `frontend/src/components/Navbar.jsx` - top navigation. Reads `localStorage.username`; if present, shows the username in the top-right button and disables it, otherwise shows a clickable `Log In` button.
+- `frontend/src/components/Hero.jsx`, `HowItWorks.jsx`, `Footer.jsx`, `Landing.jsx` - landing/marketing UI.
+- `frontend/src/test/setup.js` - Vitest setup file that imports `@testing-library/jest-dom/vitest`.
+- `frontend/src/test/components/Navbar.test.jsx` - React Testing Library tests for Navbar logged-out/logged-in username display.
 - `frontend/tasks/todo.txt` - notes required questionnaire fields and validation ideas.
 
 Backend:
@@ -91,7 +94,7 @@ Backend routes:
 
 - `GET /` - health message: `{ message: 'Backend is running' }`
 - `POST /auth/signup` - body: `{ username, email, password, confirmPassword }`; returns `{ message, token }`
-- `POST /auth/login` - body: `{ email, password }`; returns `{ message, token }`
+- `POST /auth/login` - body: `{ email, password }`; returns `{ message, token, username }`
 
 ## Local Setup And Commands
 
@@ -122,7 +125,10 @@ Frontend checks:
 cd frontend
 npm run build
 npm run lint
+npm run test -- --run
 ```
+
+On this Windows setup, PowerShell may block `npm.ps1`; use `npm.cmd` instead, for example `npm.cmd run build` and `npm.cmd test -- --run`.
 
 Backend production-ish start:
 
@@ -168,6 +174,7 @@ Current auth behavior:
 - Username is checked before insert; database unique-constraint errors are also handled for race conditions.
 - Email is trimmed/lowercased before validation and insert.
 - Password is hashed with bcrypt before storage.
+- Successful login returns the user's username so the frontend can store it in `localStorage.username` for the Navbar display.
 
 Local frontend storage keys in `SubmissionsContext.jsx`:
 
@@ -219,7 +226,7 @@ Conversation fields include:
 - `Questionnare.jsx` currently resets form state on submit but does not add a submission to context or backend.
 - `backend/migrations/001_create_users.sql` may be stale compared with the current pgAdmin-created users table.
 - `backend/src/models/User.js` is legacy and may be removable once auth/data model is stable.
-- There are no obvious automated backend tests in the scanned project.
+- Frontend has initial Vitest/React Testing Library coverage for `Navbar`; backend still has no obvious automated tests.
 
 ## Development Conventions To Preserve
 
@@ -232,6 +239,7 @@ Conversation fields include:
 - Avoid broad rewrites unless needed; this is an early-stage app with simple structure.
 - Before editing files, show the proposed change and ask for approval. The user prefers approval per file before edits.
 - For abuse protection such as signup request spam or account enumeration, prefer Express middleware before the controller. Later middleware can use `req.ip`; if deployed behind a proxy, configure Express `trust proxy`.
+- Keep frontend tests under `frontend/src/test/`, grouped by subject such as `frontend/src/test/components/`.
 
 ## Good Next Steps
 
@@ -242,4 +250,5 @@ Conversation fields include:
 - Add backend tables/routes/controllers for submissions, requests, conversations, and messages.
 - Add auth middleware to verify JWTs and attach `userId` to protected requests.
 - Add signup/login rate limiting middleware.
-- Add basic tests or at least smoke checks for signup/login and frontend build.
+- Add more frontend tests for login/signup localStorage behavior.
+- Add backend auth tests for signup/login behavior.
