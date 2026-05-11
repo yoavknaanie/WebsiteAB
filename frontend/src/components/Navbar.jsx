@@ -1,10 +1,24 @@
-import React from 'react'
-import { useNavigate } from "react-router-dom"
+import React, { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from "react-router-dom"
 
 function Navbar() {
   const navigate = useNavigate()
-  const username = localStorage.getItem('username')
+  const location = useLocation()
+  const [username, setUsername] = useState(() => localStorage.getItem('username'))
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const isLoggedIn = Boolean(username)
+
+  useEffect(() => {
+    setUsername(localStorage.getItem('username'))
+    setIsMenuOpen(false)
+  }, [location.pathname])
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('username')
+    setUsername(null)
+    setIsMenuOpen(false)
+  }
 
   const goToHero = () => {
     // Navigate to "/" and scroll to hero after page loads
@@ -20,13 +34,20 @@ function Navbar() {
       <div style={styles.logo} onClick={goToHero}>
         Accountabuddy
       </div>
-      <button
-        style={styles.button}
-        onClick={isLoggedIn ? undefined : () => navigate('/login')}
-        disabled={isLoggedIn}
-      >
-        {isLoggedIn ? username : 'Log In'}
-      </button>
+      <div style={styles.accountMenu}>
+        <button
+          style={styles.button}
+          onClick={isLoggedIn ? () => setIsMenuOpen((open) => !open) : () => navigate('/login')}
+        >
+          {isLoggedIn ? username : 'Log In'}
+        </button>
+
+        {isLoggedIn && isMenuOpen && (
+          <button style={styles.logoutButton} onClick={handleLogout}>
+            Log Out
+          </button>
+        )}
+      </div>
     </nav>
   )
 }
@@ -46,6 +67,9 @@ const styles = {
     textDecoration: 'none',
     color: 'inherit'
   },
+  accountMenu: {
+    position: 'relative'
+  },
   button: {
     backgroundColor: 'var(--yellow)',
     border: 'none',
@@ -53,6 +77,19 @@ const styles = {
     borderRadius: '999px',
     fontWeight: 550,
     cursor: 'pointer'
+  },
+  logoutButton: {
+    position: 'absolute',
+    top: 'calc(100% + 0.5rem)',
+    right: 0,
+    backgroundColor: 'white',
+    border: '1px solid #ddd',
+    padding: '0.55rem 1rem',
+    borderRadius: '8px',
+    fontWeight: 550,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.12)'
   }
 }
 

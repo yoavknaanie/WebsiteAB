@@ -37,6 +37,7 @@ const pool = require('../db/pool')
 const SALT_ROUNDS = 10
 const USERNAME_MIN_LENGTH = 3
 const USERNAME_MAX_LENGTH = 30
+const PASSWORD_MIN_LENGTH = 8
 
 const AUTH_MESSAGES = {
   ACCOUNT_CREATED: 'Account created successfully.',
@@ -48,6 +49,7 @@ const AUTH_MESSAGES = {
   LOGIN_FAILED: 'Could not log in.',
   LOGIN_SUCCESS: 'Logged in successfully.',
   PASSWORDS_DO_NOT_MATCH: 'Passwords do not match.',
+  PASSWORD_SHOULD_BE_AT_LEAST_8_CHARACTERS: 'Password should be at least 8 characters.',
   USERNAME_REQUIRED: 'Username is required.',
   USERNAME_TAKEN: 'Username is taken.',
   USERNAME_TOO_SHORT: `Username must be at least ${USERNAME_MIN_LENGTH} characters.`,
@@ -113,6 +115,10 @@ class AuthController {
       return AUTH_MESSAGES.PASSWORDS_DO_NOT_MATCH
     }
 
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      return AUTH_MESSAGES.PASSWORD_SHOULD_BE_AT_LEAST_8_CHARACTERS
+    }
+
     return null
   }
 
@@ -130,8 +136,8 @@ class AuthController {
       'SELECT 1 FROM users WHERE username = $1',
       [username],
     )
-
-    return result.rowCount > 0
+    const usernameExists = result.rowCount > 0
+    return usernameExists
   }
 
   async #createUser({ username, email, password }) {

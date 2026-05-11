@@ -59,8 +59,9 @@ function Signup() {
         {error && <p style={{ color: 'red' }}>{error}</p>}
 
         <div className="form-field">
-          <label>Username</label>
+          <label htmlFor="signup-username">Username</label>
           <input
+            id="signup-username"
             type="text"
             required
             className="form-input"
@@ -70,8 +71,9 @@ function Signup() {
         </div>
         
         <div className="form-field">
-          <label>Email</label>
+          <label htmlFor="signup-email">Email</label>
           <input
+            id="signup-email"
             type="email"
             required
             className="form-input"
@@ -81,8 +83,9 @@ function Signup() {
         </div>
 
         <div className="form-field">
-          <label>Password</label>
+          <label htmlFor="signup-password">Password</label>
           <input
+            id="signup-password"
             type="password"
             required
             className="form-input"
@@ -92,8 +95,9 @@ function Signup() {
         </div>
 
         <div className="form-field">
-          <label>Confirm Password</label>
+          <label htmlFor="signup-confirm-password">Confirm Password</label>
           <input
+            id="signup-confirm-password"
             type="password"
             required
             className="form-input"
