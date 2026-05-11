@@ -57,8 +57,9 @@ function Login() {
         {error && <p style={{ color: 'red' }}>{error}</p>}
 
         <div className="form-field">
-          <label>Email</label>
+          <label htmlFor="login-email">Email</label>
           <input
+            id="login-email"
             type="email"
             required
             className="form-input"
@@ -68,8 +69,9 @@ function Login() {
         </div>
 
         <div className="form-field">
-          <label>Password</label>
+          <label htmlFor="login-password">Password</label>
           <input
+            id="login-password"
             type="password"
             required
             className="form-input"
