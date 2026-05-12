@@ -24,3 +24,7 @@ keep in mind in the code block multiple requests.
 
 today 10.5.26:
 update login bottom to the user name
+
+For better understanding:
+video about sql indexing:
+https://www.youtube.com/watch?v=-qNSXK7s7_w

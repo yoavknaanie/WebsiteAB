@@ -6,12 +6,13 @@
  *
  * What this script does:
  * 1. Loads backend/.env so DATABASE_URL is available.
- * 2. Reads migrations/001_create_users.sql from disk.
- * 3. Sends that SQL to PostgreSQL using the shared connection pool.
- * 4. Closes the database connection after the migration finishes.
+ * 2. Reads every .sql file in backend/migrations.
+ * 3. Sorts migration files by filename, for example 001 before 002.
+ * 4. Sends each SQL file to PostgreSQL using the shared connection pool.
+ * 5. Closes the database connection after the migrations finish.
  *
- * The migration uses CREATE TABLE IF NOT EXISTS, so running this script again
- * will not delete existing users.
+ * The migrations use IF NOT EXISTS where possible, so running this script again
+ * should not delete existing data.
  */
 require('dotenv').config()
 
@@ -20,11 +21,19 @@ const path = require('path')
 const pool = require('../src/db/pool')
 
 async function initDb() {
-  const migrationPath = path.join(__dirname, '..', 'migrations', '001_create_users.sql')
-  const sql = await fs.readFile(migrationPath, 'utf8')
+  const migrationsDir = path.join(__dirname, '..', 'migrations')
+  const migrationFiles = (await fs.readdir(migrationsDir))
+    .filter((fileName) => fileName.endsWith('.sql'))
+    .sort()
 
-  // Executes the users table migration against the database in DATABASE_URL.
-  await pool.query(sql)
+  for (const fileName of migrationFiles) {
+    const migrationPath = path.join(migrationsDir, fileName)
+    const sql = await fs.readFile(migrationPath, 'utf8')
+
+    console.log(`Running migration: ${fileName}`)
+    await pool.query(sql)
+  }
+
   await pool.end()
 
   console.log('Database initialized.')

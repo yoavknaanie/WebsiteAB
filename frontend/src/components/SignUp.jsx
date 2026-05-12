@@ -2,6 +2,8 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 
+const API_URL = import.meta.env.VITE_API_URL
+const SIGNUP_ROUTE = `${API_URL}/auth/signup`
 
 function Signup() {
   const navigate = useNavigate()
@@ -26,7 +28,7 @@ function Signup() {
       setLoading(true)
 
       // Send email + password to the backend as JSON
-      const response = await fetch('http://localhost:3000/auth/signup', {
+      const response = await fetch(SIGNUP_ROUTE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password, confirmPassword }),

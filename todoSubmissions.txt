@@ -1,0 +1,173 @@
+Submissions Backend TODO
+
+1. Choose the database table shape
+
+- Use a professional table name such as `submissions` or `buddy_search_submissions`.
+- Prefer `submissions` if the app language continues to call user tickets "submissions".
+- Include `user_id` as the owner reference instead of relying only on `username`.
+- Keep `username` out of the table unless you intentionally want a historical display snapshot.
+- Decide which questionnaire fields are required and which can be nullable.
+- Match JavaScript camelCase fields to SQL snake_case fields.
+
+Suggested first table fields:
+
+- `id`
+- `user_id`
+- `title`
+- `age`
+- `gender`
+- `timezone`
+- `description`
+- `goals`
+- `looking_for`
+- `availability`
+- `communication`
+- `constraints`
+- `created_at`
+- `updated_at`
+
+2. Add a SQL migration
+
+- Create a new migration file:
+  `backend/migrations/002_create_submissions.sql`
+- Do not rely only on pgAdmin for the final schema.
+- Keep the schema in Git so the database can be recreated later.
+- Add a foreign key from `submissions.user_id` to `users.id`.
+- Use `ON DELETE CASCADE` so a user's submissions are deleted if the user is deleted.
+- Add `NOT NULL` only for fields that must always exist.
+- Add indexes that will be useful for board loading/filtering.
+
+Suggested indexes:
+
+- `user_id`
+- `created_at`
+- maybe `timezone` later if filtering by timezone becomes common
+
+3. Update database initialization
+
+- Check how `backend/scripts/initDb.js` currently loads migrations.
+- If it only runs `001_create_users.sql`, update it later to run all migration files in order.
+- Keep migration execution deterministic:
+  `001_create_users.sql`
+  then `002_create_submissions.sql`
+- After updating, test database initialization on a clean or disposable database.
+
+4. Add JWT auth middleware
+
+- Create middleware such as:
+  `backend/src/middleware/authMiddleware.js`
+- Read the token from the `Authorization` header.
+- Expect this format:
+  `Authorization: Bearer <token>`
+- Verify the token with `JWT_SECRET`.
+- Attach the logged-in user id to the request, for example:
+  `req.userId = decoded.userId`
+- Return `401 Unauthorized` when the token is missing, invalid, or expired.
+- Use this middleware before protected submission routes.
+
+5. Add backend route file
+
+- Create:
+  `backend/src/routes/submissionRoutes.js`
+- Keep the route file thin.
+- Route files should map URLs to controller functions, not contain business logic.
+
+Suggested routes:
+
+- `POST /submissions` - create a submission for the logged-in user.
+- `GET /submissions` - list all submissions for the board.
+- `GET /submissions/mine` - list submissions owned by the logged-in user.
+
+Possible later routes:
+
+- `GET /submissions/:id`
+- `PATCH /submissions/:id`
+- `DELETE /submissions/:id`
+
+6. Add backend controller
+
+- Create:
+  `backend/src/controllers/SubmissionController.js`
+- Put validation and request handling here.
+- Keep SQL parameterized.
+- Do not build SQL by concatenating request values.
+- On create, get `user_id` from `req.userId`, not from the frontend body.
+- Normalize/trim string inputs before insert.
+- Return clear validation errors for missing required fields.
+
+Suggested create response:
+
+```json
+{
+  "message": "Submission created successfully.",
+  "submission": {
+    "id": 1,
+    "userId": 3,
+    "title": "Looking for study buddy",
+    "timezone": "Australia/Sydney",
+    "createdAt": "..."
+  }
+}
+```
+
+7. Mount the routes in Express
+
+- Open:
+  `backend/src/index.js`
+- Import the new submissions route file.
+- Mount it with:
+  `app.use('/submissions', submissionRoutes)`
+- Keep `/auth` routes unchanged.
+- Confirm backend still responds to `GET /`.
+
+8. Decide validation rules
+
+- Required fields should likely include:
+  `title`
+  `timezone`
+  `description`
+  `goals`
+  `lookingFor`
+  `availability`
+  `communication`
+- Optional fields may include:
+  `age`
+  `gender`
+  `constraints`
+- Validate age if provided:
+  must be a reasonable number.
+- Validate text length to avoid huge payloads.
+- Return `400 Bad Request` for validation errors.
+- Return `500 Server Error` only for unexpected backend/database failures.
+
+9. Test with Postman or curl first
+
+- Start backend:
+  `cd backend`
+  `npm.cmd run dev`
+- Log in or sign up to get a JWT.
+- Send `POST /submissions` with:
+  `Authorization: Bearer <token>`
+- Confirm a valid request inserts a row.
+- Confirm missing token returns `401`.
+- Confirm invalid body returns `400`.
+- Confirm the row appears in pgAdmin.
+
+10. Add backend tests later
+
+- Start with manual testing first if needed.
+- Later add automated backend tests for:
+  valid submission create
+  missing token
+  invalid token
+  missing required field
+  listing submissions
+- Use a test database if possible so tests do not pollute development data.
+
+11. Wire frontend only after backend works
+
+- Do not rewrite the frontend board first.
+- First make sure `POST /submissions` works from the backend.
+- Then update `Questionnare.jsx` to send the JWT and form data.
+- Then update `SubmissionsBoard.jsx` to load real backend submissions.
+- Keep localStorage fallback only if intentionally needed during migration.

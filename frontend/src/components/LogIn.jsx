@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom'
 
 const SERVER_ERROR = 'Could not connect to the server. Please try again.'
 const LOGIN_ERROR = 'Could not log in. Please try again.'
-const LOGIN_ROUTE = 'http://localhost:3000/auth/login'
+const API_URL = import.meta.env.VITE_API_URL
+const LOGIN_ROUTE = `${API_URL}/auth/login`
 
 function Login() {
   const navigate = useNavigate()
