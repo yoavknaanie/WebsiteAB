@@ -56,16 +56,19 @@ Frontend:
 - `frontend/src/App.jsx` - route table and top-level layout. Always renders `Navbar`.
 - `frontend/src/index.css` and `frontend/src/App.css` - global styling.
 - `frontend/src/contexts/SubmissionsContext.jsx` - localStorage-backed data layer for submissions, requests, conversations, messages, and anonymous viewer id.
-- `frontend/src/components/SignUp.jsx` - signup form with username text input, email input, password, and confirm password. Calls `POST http://localhost:3000/auth/signup` with `{ username, email, password, confirmPassword }`, stores JWT in `localStorage.token`, stores the submitted username in `localStorage.username`, and navigates to `/questionnaire`.
-- `frontend/src/components/LogIn.jsx` - login form, calls `POST http://localhost:3000/auth/login`, stores JWT in `localStorage.token`, stores returned username in `localStorage.username`, and navigates to `/questionnaire`.
+- `frontend/src/components/SignUp.jsx` - signup form with username text input, email input, password, and confirm password. Calls `${import.meta.env.VITE_API_URL}/auth/signup` with `{ username, email, password, confirmPassword }`, stores JWT in `localStorage.token`, stores the submitted username in `localStorage.username`, and navigates to `/questionnaire`.
+- `frontend/src/components/LogIn.jsx` - login form, calls `${import.meta.env.VITE_API_URL}/auth/login`, stores JWT in `localStorage.token`, stores returned username in `localStorage.username`, and navigates to `/questionnaire`.
 - `frontend/src/components/Questionnare.jsx` - questionnaire form. Filename is misspelled as `Questionnare`. It collects ticket/submission fields but currently does not call backend or context on submit.
 - `frontend/src/components/SubmissionsBoard.jsx` - browses and filters submissions from context; can send/cancel connection requests.
 - `frontend/src/components/MyBoard.jsx` - shows current viewer submissions and sent requests; accepts/cancels requests and includes a chat box for accepted requests.
 - `frontend/src/components/Chats.jsx` - lists active conversations for the current viewer and allows sending local messages.
-- `frontend/src/components/Navbar.jsx` - top navigation. Reads `localStorage.username`; if present, shows the username in the top-right button and disables it, otherwise shows a clickable `Log In` button.
+- `frontend/src/components/Navbar.jsx` - top navigation. Reads `localStorage.username`; if present, shows the username in the top-right button. Clicking the username opens a `Log Out` button that clears `localStorage.token` and `localStorage.username`, then returns the navbar to `Log In`. Uses `useLocation` to reread username after route changes such as login/signup navigation.
 - `frontend/src/components/Hero.jsx`, `HowItWorks.jsx`, `Footer.jsx`, `Landing.jsx` - landing/marketing UI.
 - `frontend/src/test/setup.js` - Vitest setup file that imports `@testing-library/jest-dom/vitest`.
-- `frontend/src/test/components/Navbar.test.jsx` - React Testing Library tests for Navbar logged-out/logged-in username display.
+- `frontend/.env.example` - committed frontend env template with `VITE_API_URL=http://localhost:3000`.
+- `frontend/src/test/components/Navbar.test.jsx` - React Testing Library tests for Navbar logged-out display, username dropdown, and logout behavior.
+- `frontend/src/test/integration/SignUp.integration.test.jsx` - real-backend integration tests for signup success and backend validation error display.
+- `frontend/src/test/integration/AuthFlow.integration.test.jsx` - real-backend integration test for signup, logout, failed login, successful login, route navigation, and logout.
 - `frontend/tasks/todo.txt` - notes required questionnaire fields and validation ideas.
 
 Backend:
@@ -75,8 +78,8 @@ Backend:
 - `backend/src/controllers/AuthController.js` - validates signup/login, normalizes username/email, hashes passwords, stores/loads users from PostgreSQL, and returns JWTs. Uses private class helper methods and `AUTH_MESSAGES` constants.
 - `backend/src/db/pool.js` - shared PostgreSQL pool. Requires `DATABASE_URL`.
 - `backend/src/models/User.js` - legacy in-memory user shape. Current auth does not use this model.
-- `backend/migrations/001_create_users.sql` - originally created `users` table with `id`, unique `email`, `password_hash`, and `created_at`; update it before relying on `npm run db:init` for the newer username-required schema.
-- `backend/scripts/initDb.js` - loads `backend/.env`, runs `001_create_users.sql`, then closes the pool.
+- `backend/migrations/001_create_users.sql` - creates `users` table with `id`, unique `username`, unique `email`, `password_hash`, and `created_at`.
+- `backend/scripts/initDb.js` - loads `backend/.env`, reads all `.sql` files in `backend/migrations`, sorts them by filename, runs them in order, then closes the pool.
 
 ## Routes
 
@@ -126,9 +129,12 @@ cd frontend
 npm run build
 npm run lint
 npm run test -- --run
+npm run test:integration
 ```
 
-On this Windows setup, PowerShell may block `npm.ps1`; use `npm.cmd` instead, for example `npm.cmd run build` and `npm.cmd test -- --run`.
+On this Windows setup, PowerShell may block `npm.ps1`; use `npm.cmd` instead, for example `npm.cmd run build`, `npm.cmd test -- --run`, and `npm.cmd run test:integration`.
+
+`npm run test -- --run` runs quick component tests under `frontend/src/test/components`. `npm run test:integration` runs real-backend integration tests under `frontend/src/test/integration`; backend and PostgreSQL must be running, and these tests create real `testXXXX` users.
 
 Backend production-ish start:
 
@@ -148,6 +154,14 @@ PORT=3000
 ```
 
 `DATABASE_URL` is required by `backend/src/db/pool.js`. `JWT_SECRET` is required for signup/login token signing.
+
+Frontend expects `frontend/.env` locally with:
+
+```env
+VITE_API_URL=http://localhost:3000
+```
+
+Commit `frontend/.env.example`, not the real `frontend/.env`.
 
 Do not commit `.env` files or real secrets.
 
@@ -175,6 +189,7 @@ Current auth behavior:
 - Email is trimmed/lowercased before validation and insert.
 - Password is hashed with bcrypt before storage.
 - Successful login returns the user's username so the frontend can store it in `localStorage.username` for the Navbar display.
+- Frontend logout is local-only for now: it removes `localStorage.token` and `localStorage.username`; no backend logout route exists yet.
 
 Local frontend storage keys in `SubmissionsContext.jsx`:
 
@@ -224,9 +239,8 @@ Conversation fields include:
 - No backend routes currently exist for submissions, requests, or conversations.
 - `SubmissionsContext.jsx` uses `localStorage`, so data is per-browser and not shared between real users.
 - `Questionnare.jsx` currently resets form state on submit but does not add a submission to context or backend.
-- `backend/migrations/001_create_users.sql` may be stale compared with the current pgAdmin-created users table.
 - `backend/src/models/User.js` is legacy and may be removable once auth/data model is stable.
-- Frontend has initial Vitest/React Testing Library coverage for `Navbar`; backend still has no obvious automated tests.
+- Frontend has Vitest/React Testing Library component coverage for `Navbar` and real-backend integration coverage for signup/auth flows; backend still has no standalone automated tests.
 
 ## Development Conventions To Preserve
 
@@ -240,15 +254,14 @@ Conversation fields include:
 - Before editing files, show the proposed change and ask for approval. The user prefers approval per file before edits.
 - For abuse protection such as signup request spam or account enumeration, prefer Express middleware before the controller. Later middleware can use `req.ip`; if deployed behind a proxy, configure Express `trust proxy`.
 - Keep frontend tests under `frontend/src/test/`, grouped by subject such as `frontend/src/test/components/`.
+- Keep frontend integration tests under `frontend/src/test/integration/`; they require the real backend and PostgreSQL and may create disposable `testXXXX` users.
 
 ## Good Next Steps
 
-- Update `backend/migrations/001_create_users.sql` to match the current required username schema.
 - Fix remaining text encoding artifacts in UI strings.
 - Decide whether to rename `Questionnare.jsx` to `Questionnaire.jsx` and update imports.
 - Wire questionnaire submit to `addSubmission` or, preferably, a new backend `POST /submissions`.
 - Add backend tables/routes/controllers for submissions, requests, conversations, and messages.
 - Add auth middleware to verify JWTs and attach `userId` to protected requests.
 - Add signup/login rate limiting middleware.
-- Add more frontend tests for login/signup localStorage behavior.
 - Add backend auth tests for signup/login behavior.

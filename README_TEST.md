@@ -95,6 +95,7 @@ Integration tests require:
 - Backend running on `http://localhost:3000`.
 - PostgreSQL running.
 - `backend/.env` configured with `DATABASE_URL` and `JWT_SECRET`.
+- `frontend/.env` configured with `VITE_API_URL=http://localhost:3000`.
 - Users table already created.
 
 Current integration tests cover:
@@ -105,6 +106,12 @@ Current integration tests cover:
 - Failed login with correct user and wrong password.
 - Successful login.
 - Navbar preserving the username after route navigation.
+
+The `test:integration` script runs every test file under:
+
+```text
+frontend/src/test/integration
+```
 
 ## Database Note
 
