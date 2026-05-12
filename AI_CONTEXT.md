@@ -76,6 +76,9 @@ Backend:
 - `backend/src/index.js` - Express entrypoint. Loads dotenv, enables CORS and JSON parsing, mounts `/auth`, responds on `/`.
 - `backend/src/routes/authRoutes.js` - maps `POST /auth/signup` and `POST /auth/login` to the auth controller.
 - `backend/src/controllers/AuthController.js` - validates signup/login, normalizes username/email, hashes passwords, stores/loads users from PostgreSQL, and returns JWTs. Uses private class helper methods and `AUTH_MESSAGES` constants.
+- `backend/src/middleware/authMiddleware.js` - JWT middleware for protected routes. Expects `Authorization: Bearer <token>`, verifies with `JWT_SECRET`, attaches `req.userId`, and returns `401` for missing/invalid/expired tokens.
+- `backend/src/routes/submissionRoutes.js` - documented submissions route skeleton. Imports `authMiddleware` and `SubmissionController`, exports an Express router, but route handlers are still commented until controller database logic is implemented.
+- `backend/src/controllers/SubmissionController.js` - documented submissions controller skeleton with `create`, `list`, and `listMine` placeholder methods. Database logic is not implemented yet.
 - `backend/src/db/pool.js` - shared PostgreSQL pool. Requires `DATABASE_URL`.
 - `backend/src/models/User.js` - legacy in-memory user shape. Current auth does not use this model.
 - `backend/migrations/001_create_users.sql` - creates `users` table with `id`, unique `username`, unique `email`, `password_hash`, and `created_at`.
@@ -236,7 +239,7 @@ Conversation fields include:
 - The questionnaire filename is `Questionnare.jsx`, not `Questionnaire.jsx`.
 - Some files contain mojibake/encoding artifacts where dashes, arrows, or ellipses were probably intended.
 - Signup/login store JWTs in `localStorage`, but most app data does not use the JWT yet.
-- No backend routes currently exist for submissions, requests, or conversations.
+- Backend submissions scaffolding exists, but submissions routes are not mounted and controller database logic is not implemented yet. Requests/conversations still have no backend routes.
 - `SubmissionsContext.jsx` uses `localStorage`, so data is per-browser and not shared between real users.
 - `Questionnare.jsx` currently resets form state on submit but does not add a submission to context or backend.
 - `backend/src/models/User.js` is legacy and may be removable once auth/data model is stable.
@@ -255,13 +258,16 @@ Conversation fields include:
 - For abuse protection such as signup request spam or account enumeration, prefer Express middleware before the controller. Later middleware can use `req.ip`; if deployed behind a proxy, configure Express `trust proxy`.
 - Keep frontend tests under `frontend/src/test/`, grouped by subject such as `frontend/src/test/components/`.
 - Keep frontend integration tests under `frontend/src/test/integration/`; they require the real backend and PostgreSQL and may create disposable `testXXXX` users.
+- For protected backend routes, use `backend/src/middleware/authMiddleware.js` and read the logged-in owner from `req.userId`, not from request body fields.
 
 ## Good Next Steps
 
 - Fix remaining text encoding artifacts in UI strings.
 - Decide whether to rename `Questionnare.jsx` to `Questionnaire.jsx` and update imports.
+- Implement `SubmissionController.create`, `list`, and `listMine` with parameterized PostgreSQL queries.
+- Uncomment and mount submissions routes after controller database logic is implemented.
 - Wire questionnaire submit to `addSubmission` or, preferably, a new backend `POST /submissions`.
-- Add backend tables/routes/controllers for submissions, requests, conversations, and messages.
+- Add backend tables/routes/controllers for requests, conversations, and messages.
 - Add auth middleware to verify JWTs and attach `userId` to protected requests.
 - Add signup/login rate limiting middleware.
 - Add backend auth tests for signup/login behavior.
