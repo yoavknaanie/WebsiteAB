@@ -25,6 +25,9 @@
 
 const pool = require('../db/pool')
 
+const DEFAULT_SUBMISSIONS_LIMIT = 20
+const MAX_SUBMISSIONS_LIMIT = 50
+
 const STATUS = {
   OK: 200,
   CREATED: 201,
@@ -39,6 +42,9 @@ const SUBMISSION_MESSAGES = {
   DELETE_SUCCESS: 'Submission deleted successfully.',
   DELETE_FAILED: 'Could not delete submission.',
   LIST_FAILED: 'Could not load submissions.',
+  LIMIT_INVALID: 'Limit must be a positive integer.',
+  LIMIT_TOO_HIGH: `Limit cannot be greater than ${MAX_SUBMISSIONS_LIMIT}.`,
+  OFFSET_INVALID: 'Offset must be a non-negative integer.',
   USER_REQUIRED: 'Logged-in user is required.',
   SUBMISSION_ID_REQUIRED: 'Submission id is required.',
   SUBMISSION_ID_INVALID: 'Submission id must be a positive integer.',
@@ -256,6 +262,68 @@ class SubmissionController {
     })
   }
 
+  #getListOptions(req) {
+    return {
+      limit: req.query.limit,
+      offset: req.query.offset,
+    }
+  }
+
+  #normalizeListOptions(options) {
+    return {
+      limit: options.limit === undefined ? DEFAULT_SUBMISSIONS_LIMIT : Number(options.limit),
+      offset: options.offset === undefined ? 0 : Number(options.offset),
+    }
+  }
+
+  #validateListOptions(options) {
+    if (!Number.isInteger(options.limit) || options.limit <= 0) {
+      throw this.#createValidationError(SUBMISSION_MESSAGES.LIMIT_INVALID)
+    }
+
+    if (options.limit > MAX_SUBMISSIONS_LIMIT) {
+      throw this.#createValidationError(SUBMISSION_MESSAGES.LIMIT_TOO_HIGH)
+    }
+
+    if (!Number.isInteger(options.offset) || options.offset < 0) {
+      throw this.#createValidationError(SUBMISSION_MESSAGES.OFFSET_INVALID)
+    }
+  }
+
+  async #listSubmissions(options) {
+    const result = await pool.query(
+      `
+        SELECT
+          id,
+          user_id,
+          title,
+          age,
+          gender,
+          timezone,
+          description,
+          goals,
+          looking_for1,
+          looking_for2,
+          looking_for3,
+          looking_for4,
+          looking_for5,
+          availability,
+          communication,
+          constraints,
+          created_at
+        FROM submissions
+        ORDER BY created_at DESC, id DESC
+        LIMIT $1 OFFSET $2
+      `,
+      [options.limit + 1, options.offset],
+    )
+
+    return {
+      submissions: result.rows.slice(0, options.limit),
+      hasMore: result.rows.length > options.limit,
+    }
+  }
+
   /**
    * POST /submissions
    *
@@ -337,18 +405,42 @@ class SubmissionController {
     }
   }
 
-    /**
+  /**
    * GET /submissions
    *
-   * Planned flow:
+   * Public board listing flow:
    * 1. Load public submissions from PostgreSQL.
    * 2. Sort newest first.
-   * 3. Return submissions for the board.
+   * 3. Return submissions with limit/offset pagination metadata.
    */
   async list(req, res) {
-    return res.status(STATUS.SERVER_ERROR).json({
-      error: 'TODO: SubmissionController.list is not implemented yet.',
-    })
+    try {
+      const listOptions = this.#getListOptions(req)
+      const normalizedListOptions = this.#normalizeListOptions(listOptions)
+
+      this.#validateListOptions(normalizedListOptions)
+
+      const { submissions, hasMore } = await this.#listSubmissions(normalizedListOptions)
+
+      return res.status(STATUS.OK).json({
+        submissions,
+        pagination: {
+          limit: normalizedListOptions.limit,
+          offset: normalizedListOptions.offset,
+          count: submissions.length,
+          hasMore,
+        },
+      })
+    } catch (error) {
+      if (error.status === STATUS.BAD_REQUEST) {
+        return res.status(STATUS.BAD_REQUEST).json({ error: error.message })
+      }
+
+      console.error('Submission listing failed:', error)
+      return res.status(STATUS.SERVER_ERROR).json({
+        error: SUBMISSION_MESSAGES.LIST_FAILED,
+      })
+    }
   }
 
   /**

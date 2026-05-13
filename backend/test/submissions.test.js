@@ -22,6 +22,16 @@ const secondTestUser = {
   email: `missing-${testUser.email}`,
   password: testUser.password,
 }
+const listTestUser = {
+  username: `subtest${testRunId}c`.slice(0, 30),
+  email: `list-${testUser.email}`,
+  password: testUser.password,
+}
+const validationTestUser = {
+  username: `subtest${testRunId}d`.slice(0, 30),
+  email: `validation-${testUser.email}`,
+  password: testUser.password,
+}
 
 let serverProcess
 
@@ -56,7 +66,12 @@ async function waitForServer() {
 }
 
 async function deleteTestUser() {
-  await pool.query('DELETE FROM users WHERE email = ANY($1)', [[testUser.email, secondTestUser.email]])
+  await pool.query('DELETE FROM users WHERE email = ANY($1)', [[
+    testUser.email,
+    secondTestUser.email,
+    listTestUser.email,
+    validationTestUser.email,
+  ]])
 }
 
 async function runMigrations() {
@@ -69,6 +84,52 @@ async function runMigrations() {
     const sql = await fs.readFile(path.join(migrationsPath, migrationFile), 'utf8')
     await pool.query(sql)
   }
+}
+
+async function signupUser(user) {
+  const signupResult = await request('/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: user.username,
+      email: user.email,
+      password: user.password,
+      confirmPassword: user.password,
+    }),
+  })
+
+  assert.equal(signupResult.response.status, 201)
+  assert.ok(signupResult.body.token)
+
+  return signupResult.body.token
+}
+
+async function createSubmission(token, submissionOverrides = {}) {
+  const createResult = await request('/submissions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      title: 'Looking for study buddy',
+      age: 25,
+      gender: 'Other',
+      timezone: 'Australia/Sydney',
+      description: 'Testing backend submissions',
+      goals: 'Study daily',
+      looking_for1: 'Accountability',
+      looking_for2: 'Focus sessions',
+      looking_for3: 'Weekly check-ins',
+      looking_for4: 'Similar timezone',
+      looking_for5: 'Kind communication',
+      availability: 'Evenings',
+      communication: 'Discord',
+      constraints: 'None',
+      ...submissionOverrides,
+    }),
+  })
+
+  assert.equal(createResult.response.status, 201)
+  return createResult.body.submission
 }
 
 before(async () => {
@@ -101,50 +162,14 @@ after(async () => {
 })
 
 test('creates and deletes a submission for the logged-in user', async () => {
-  const signupResult = await request('/auth/signup', {
-    method: 'POST',
-    body: JSON.stringify({
-      username: testUser.username,
-      email: testUser.email,
-      password: testUser.password,
-      confirmPassword: testUser.password,
-    }),
-  })
+  const token = await signupUser(testUser)
+  const submission = await createSubmission(token)
 
-  assert.equal(signupResult.response.status, 201)
-  assert.ok(signupResult.body.token)
+  assert.ok(submission.id)
+  assert.equal(submission.title, 'Looking for study buddy')
+  assert.equal(submission.age, 25)
 
-  const token = signupResult.body.token
-  const createResult = await request('/submissions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      title: 'Looking for study buddy',
-      age: 25,
-      gender: 'Other',
-      timezone: 'Australia/Sydney',
-      description: 'Testing backend submissions',
-      goals: 'Study daily',
-      looking_for1: 'Accountability',
-      looking_for2: 'Focus sessions',
-      looking_for3: 'Weekly check-ins',
-      looking_for4: 'Similar timezone',
-      looking_for5: 'Kind communication',
-      availability: 'Evenings',
-      communication: 'Discord',
-      constraints: 'None',
-    }),
-  })
-
-  assert.equal(createResult.response.status, 201)
-  assert.equal(createResult.body.message, 'Submission created successfully.')
-  assert.ok(createResult.body.submission.id)
-  assert.equal(createResult.body.submission.title, 'Looking for study buddy')
-  assert.equal(createResult.body.submission.age, 25)
-
-  const submissionId = createResult.body.submission.id
+  const submissionId = submission.id
   const deleteResult = await request(`/submissions/${submissionId}`, {
     method: 'DELETE',
     headers: {
@@ -157,6 +182,32 @@ test('creates and deletes a submission for the logged-in user', async () => {
   assert.equal(deleteResult.body.submission.id, submissionId)
 })
 
+test('lists public submissions with pagination metadata', async () => {
+  const token = await signupUser(listTestUser)
+  const firstSubmission = await createSubmission(token, {
+    title: 'First list test submission',
+  })
+  const secondSubmission = await createSubmission(token, {
+    title: 'Second list test submission',
+  })
+
+  const listResult = await request('/submissions?limit=1&offset=0')
+
+  assert.equal(listResult.response.status, 200)
+  assert.equal(listResult.body.submissions.length, 1)
+  assert.equal(listResult.body.submissions[0].id, secondSubmission.id)
+  assert.equal(listResult.body.pagination.limit, 1)
+  assert.equal(listResult.body.pagination.offset, 0)
+  assert.equal(listResult.body.pagination.count, 1)
+  assert.equal(listResult.body.pagination.hasMore, true)
+
+  const secondPageResult = await request('/submissions?limit=1&offset=1')
+
+  assert.equal(secondPageResult.response.status, 200)
+  assert.equal(secondPageResult.body.submissions.length, 1)
+  assert.equal(secondPageResult.body.submissions[0].id, firstSubmission.id)
+})
+
 test('rejects submission creation without a token', async () => {
   const result = await request('/submissions', {
     method: 'POST',
@@ -167,6 +218,102 @@ test('rejects submission creation without a token', async () => {
 
   assert.equal(result.response.status, 401)
   assert.equal(result.body.error, 'Unauthorized.')
+})
+
+test('rejects invalid submission age', async () => {
+  const token = await signupUser(validationTestUser)
+  const requiredSubmissionFields = {
+    title: 'Validation test submission',
+    age: 25,
+    gender: 'Other',
+    timezone: 'Australia/Sydney',
+    availability: 'Evenings',
+    communication: 'Discord',
+  }
+  const invalidRequests = [
+    {
+      body: { ...requiredSubmissionFields, age: 12 },
+      expectedError: 'Age must be a number between 13 and 120.',
+    },
+    {
+      body: { ...requiredSubmissionFields, age: 121 },
+      expectedError: 'Age must be a number between 13 and 120.',
+    },
+  ]
+
+  for (const invalidRequest of invalidRequests) {
+    const result = await request('/submissions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(invalidRequest.body),
+    })
+
+    assert.equal(result.response.status, 400)
+    assert.equal(result.body.error, invalidRequest.expectedError)
+  }
+})
+
+test('rejects submission creation with missing required fields', async () => {
+  const loginResult = await request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: validationTestUser.email,
+      password: validationTestUser.password,
+    }),
+  })
+
+  assert.equal(loginResult.response.status, 200)
+
+  const token = loginResult.body.token
+  const requiredSubmissionFields = {
+    title: 'Validation test submission',
+    age: 25,
+    gender: 'Other',
+    timezone: 'Australia/Sydney',
+    availability: 'Evenings',
+    communication: 'Discord',
+  }
+  const invalidRequests = [
+    {
+      body: { ...requiredSubmissionFields, title: '' },
+      expectedError: 'Title is required.',
+    },
+    {
+      body: { ...requiredSubmissionFields, age: undefined },
+      expectedError: 'Age is required.',
+    },
+    {
+      body: { ...requiredSubmissionFields, gender: '' },
+      expectedError: 'Gender is required.',
+    },
+    {
+      body: { ...requiredSubmissionFields, timezone: '' },
+      expectedError: 'Timezone is required.',
+    },
+    {
+      body: { ...requiredSubmissionFields, availability: '' },
+      expectedError: 'Availability is required.',
+    },
+    {
+      body: { ...requiredSubmissionFields, communication: '' },
+      expectedError: 'Communication is required.',
+    },
+  ]
+
+  for (const invalidRequest of invalidRequests) {
+    const result = await request('/submissions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(invalidRequest.body),
+    })
+
+    assert.equal(result.response.status, 400)
+    assert.equal(result.body.error, invalidRequest.expectedError)
+  }
 })
 
 test('rejects invalid and missing submission deletes', async () => {
@@ -202,4 +349,21 @@ test('rejects invalid and missing submission deletes', async () => {
   assert.equal(missingSubmissionResult.response.status, 404)
 
   await pool.query('DELETE FROM users WHERE email = $1', [secondTestUser.email])
+})
+
+test('rejects invalid list pagination options', async () => {
+  const invalidLimitResult = await request('/submissions?limit=abc')
+
+  assert.equal(invalidLimitResult.response.status, 400)
+  assert.equal(invalidLimitResult.body.error, 'Limit must be a positive integer.')
+
+  const invalidOffsetResult = await request('/submissions?offset=-1')
+
+  assert.equal(invalidOffsetResult.response.status, 400)
+  assert.equal(invalidOffsetResult.body.error, 'Offset must be a non-negative integer.')
+
+  const tooHighLimitResult = await request('/submissions?limit=51')
+
+  assert.equal(tooHighLimitResult.response.status, 400)
+  assert.equal(tooHighLimitResult.body.error, 'Limit cannot be greater than 50.')
 })

@@ -43,8 +43,8 @@ router.post('/', authMiddleware, (req, res) => submissionController.create(req, 
 // Delete one of the logged-in user's submissions by submission id.
 router.delete('/:id', authMiddleware, (req, res) => submissionController.delete(req, res))
 
-// TODO: Uncomment after SubmissionController.list database logic is implemented.
-// router.get('/', (req, res) => submissionController.list(req, res))
+// List public submissions for the submissions board.
+router.get('/', (req, res) => submissionController.list(req, res))
 
 // TODO: Uncomment after SubmissionController.listMine database logic is implemented.
 // router.get('/mine', authMiddleware, (req, res) => submissionController.listMine(req, res))

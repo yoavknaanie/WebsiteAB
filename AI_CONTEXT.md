@@ -18,6 +18,7 @@ Core product idea:
 The current implementation is partly backend-backed and partly local-only:
 
 - Auth is implemented against Express + PostgreSQL, including username, email, password hashing, and JWT creation.
+- Backend submissions support creating, deleting, and listing submission tickets through Express + PostgreSQL.
 - Submissions, requests, conversations, viewer identity, and chat messages currently live in browser `localStorage` through React context.
 - The questionnaire has TODO comments for replacing local/frontend submission behavior with Express backend calls.
 
@@ -73,16 +74,19 @@ Frontend:
 
 Backend:
 
-- `backend/src/index.js` - Express entrypoint. Loads dotenv, enables CORS and JSON parsing, mounts `/auth`, responds on `/`. Contains TODO/commented submissions route mounting until backend submissions are ready to be verified.
+- `backend/src/index.js` - Express entrypoint. Loads dotenv, enables CORS and JSON parsing, mounts `/auth` and `/submissions`, responds on `/`, and starts the server.
 - `backend/src/routes/authRoutes.js` - maps `POST /auth/signup` and `POST /auth/login` to the auth controller.
 - `backend/src/controllers/AuthController.js` - validates signup/login, normalizes username/email, hashes passwords, stores/loads users from PostgreSQL, and returns JWTs. Uses private class helper methods and `AUTH_MESSAGES` constants.
 - `backend/src/middleware/authMiddleware.js` - JWT middleware for protected routes. Expects `Authorization: Bearer <token>`, verifies with `JWT_SECRET`, attaches `req.userId`, and returns `401` for missing/invalid/expired tokens.
-- `backend/src/routes/submissionRoutes.js` - Express router for submissions. Currently supports protected `POST /` for creating a submission and protected `DELETE /:id` for deleting one of the logged-in user's submissions. Future `GET /` and `GET /mine` routes are still commented/TODO.
-- `backend/src/controllers/SubmissionController.js` - submissions controller with `create` and `delete` implemented using private helper methods and parameterized PostgreSQL queries. `create` uses `req.userId` from JWT middleware plus request body fields matching the submissions table, except database-owned fields such as `id`, `user_id`, and `created_at`. `delete` deletes by submission `id` and `req.userId`, so users cannot delete another user's submission.
+- `backend/src/routes/submissionRoutes.js` - Express router for submissions. Supports public `GET /` for listing submissions, protected `POST /` for creating a submission, and protected `DELETE /:id` for deleting one of the logged-in user's submissions. Future `GET /mine` route is still commented/TODO.
+- `backend/src/controllers/SubmissionController.js` - submissions controller with `create`, `delete`, and `list` implemented using private helper methods and parameterized PostgreSQL queries. `create` uses `req.userId` from JWT middleware plus request body fields matching the submissions table, except database-owned fields such as `id`, `user_id`, and `created_at`. `delete` deletes by submission `id` and `req.userId`, so users cannot delete another user's submission. `list` returns newest submissions first with `limit`/`offset` pagination metadata.
 - `backend/src/db/pool.js` - shared PostgreSQL pool. Requires `DATABASE_URL`.
 - `backend/src/models/User.js` - legacy in-memory user shape. Current auth does not use this model.
 - `backend/migrations/001_create_users.sql` - creates `users` table with `id`, unique `username`, unique `email`, `password_hash`, and `created_at`.
+- `backend/migrations/002_create_submissions_board.sql` - creates `submissions` table and indexes for listing/filtering.
 - `backend/scripts/initDb.js` - loads `backend/.env`, reads all `.sql` files in `backend/migrations`, sorts them by filename, runs them in order, then closes the pool.
+- `backend/test/submissions.test.js` - Node test-runner integration tests for submission create, delete, list, auth, validation errors, and pagination validation. Starts the backend on port `3101`, applies migrations, uses the real PostgreSQL database, and cleans up disposable users.
+- `backend/README_TEST.md` - documents backend test requirements and commands.
 
 ## Routes
 
@@ -101,9 +105,11 @@ Backend routes:
 - `GET /` - health message: `{ message: 'Backend is running' }`
 - `POST /auth/signup` - body: `{ username, email, password, confirmPassword }`; returns `{ message, token }`
 - `POST /auth/login` - body: `{ email, password }`; returns `{ message, token, username }`
-- Planned submissions routes after mounting `submissionRoutes`:
+- `GET /submissions` - public; returns newest submissions with pagination: `{ submissions, pagination: { limit, offset, count, hasMore } }`. Supports optional `limit` and `offset` query params. Default limit is `20`; max limit is `50`.
 - `POST /submissions` - protected by JWT; creates a submission for the logged-in user.
 - `DELETE /submissions/:id` - protected by JWT; deletes a submission only if it belongs to the logged-in user.
+- Planned submissions route:
+- `GET /submissions/mine` - protected by JWT; should list submissions created by the logged-in user.
 
 ## Local Setup And Commands
 
@@ -148,6 +154,16 @@ Backend production-ish start:
 cd backend
 npm start
 ```
+
+Backend checks:
+
+```bash
+cd backend
+npm test
+npm run test:submissions
+```
+
+On this Windows setup, PowerShell may block `npm.ps1`; use `npm.cmd` instead, for example `npm.cmd test` and `npm.cmd run test:submissions`.
 
 ## Environment Variables
 
@@ -266,11 +282,11 @@ Conversation fields include:
 - The questionnaire filename is `Questionnare.jsx`, not `Questionnaire.jsx`.
 - Some files contain mojibake/encoding artifacts where dashes, arrows, or ellipses were probably intended.
 - Signup/login store JWTs in `localStorage`, but most app data does not use the JWT yet.
-- Backend submissions create/delete controller logic exists and the submission router has matching routes, but submissions routes still need to be mounted in `backend/src/index.js` before testing the endpoints. Requests/conversations still have no backend routes.
+- Backend submissions create/delete/list routes are mounted and covered by backend integration tests. Requests/conversations still have no backend routes.
 - `SubmissionsContext.jsx` uses `localStorage`, so data is per-browser and not shared between real users.
 - `Questionnare.jsx` currently resets form state on submit but does not add a submission to context or backend.
 - `backend/src/models/User.js` is legacy and may be removable once auth/data model is stable.
-- Frontend has Vitest/React Testing Library component coverage for `Navbar` and real-backend integration coverage for signup/auth flows; backend still has no standalone automated tests.
+- Frontend has Vitest/React Testing Library component coverage for `Navbar` and real-backend integration coverage for signup/auth flows. Backend has Node test-runner integration coverage for submissions.
 
 ## Development Conventions To Preserve
 
@@ -291,11 +307,9 @@ Conversation fields include:
 
 - Fix remaining text encoding artifacts in UI strings.
 - Decide whether to rename `Questionnare.jsx` to `Questionnaire.jsx` and update imports.
-- Next intended step: check/test the backend add-submission and delete-submission flow.
-- Mount submissions routes in `backend/src/index.js`, then test `POST /submissions` and `DELETE /submissions/:id` with a valid JWT.
-- Later implement `SubmissionController.list` and `listMine` with parameterized PostgreSQL queries.
-- Wire questionnaire submit to `addSubmission` or, preferably, a new backend `POST /submissions`.
+- Wire questionnaire submit to backend `POST /submissions`.
+- Wire submissions board to backend `GET /submissions` instead of localStorage-only context data.
+- Implement `SubmissionController.listMine` and `GET /submissions/mine` with parameterized PostgreSQL queries.
 - Add backend tables/routes/controllers for requests, conversations, and messages.
-- Add auth middleware to verify JWTs and attach `userId` to protected requests.
 - Add signup/login rate limiting middleware.
 - Add backend auth tests for signup/login behavior.
