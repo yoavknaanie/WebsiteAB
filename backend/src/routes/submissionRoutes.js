@@ -37,8 +37,11 @@ const router = express.Router()
 const authMiddleware = require('../middleware/authMiddleware')
 const submissionController = require('../controllers/SubmissionController')
 
-// TODO: Uncomment after SubmissionController.create database logic is implemented.
-// router.post('/', authMiddleware, (req, res) => submissionController.create(req, res))
+// Create a new submission for the logged-in user.
+router.post('/', authMiddleware, (req, res) => submissionController.create(req, res))
+
+// Delete one of the logged-in user's submissions by submission id.
+router.delete('/:id', authMiddleware, (req, res) => submissionController.delete(req, res))
 
 // TODO: Uncomment after SubmissionController.list database logic is implemented.
 // router.get('/', (req, res) => submissionController.list(req, res))

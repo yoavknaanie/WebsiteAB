@@ -18,7 +18,7 @@
 
 const jwt = require('jsonwebtoken')
 
-const AUTH_ERROR = 'Unauthorized.'
+const AUTH_ERROR = 'Unauthorized.' // in no token was provided, or if the token is invalid/expired.
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization
