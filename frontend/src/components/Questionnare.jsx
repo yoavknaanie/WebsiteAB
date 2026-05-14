@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react'
 // TODO: replace Firebase submission with Express backend call (POST /submissions)
 
 // ======================= CONSTANTS =======================
+const API_URL = import.meta.env.VITE_API_URL
+const SUBMISSION_ROUTE = `${API_URL}/submissions`
 const availabilityOptions = ['Multiple daily', 'Once daily', 'Every couple of days', 'Weekly', 'Other']
 
 const communicationOptions = [
@@ -55,6 +57,8 @@ function Questionnaire() {
   const [hasConstraints, setHasConstraints] = useState(false)
   const [submitted, setSubmitted] = useState(true)
   const [errors, setErrors] = useState({})
+  const [successMessage, setSuccessMessage] = useState('')
+  const [loading, setLoading] = useState(false)
 
   // ------------------- DERIVED -------------------
   const titlePlaceholder = `Ex. ${formData.age || ''}${formData.gender || ''} ${formData.timezone || ''} | Looking for a daily study buddy`.trim()
@@ -77,6 +81,7 @@ function Questionnaire() {
 
   // ------------------- HANDLERS -------------------
   const handleChange = (e) => {
+    setSuccessMessage('')
     const { name, value, type, checked } = e.target
     if (type === 'checkbox') {
       setFormData((prev) => {
@@ -94,22 +99,85 @@ function Questionnaire() {
   }
 
   const handleLookingForChange = (index, value) => {
+    setSuccessMessage('')
     const updated = [...formData.lookingFor]
     updated[index] = value
     setFormData({ ...formData, lookingFor: updated })
   }
 
+  const handleSuccessfulSubmission = () => {
+    setFormData({
+      title: '', age: null, gender: '', otherGender: '', timezone: formData.timezone,
+      description: '', goals: '', lookingFor: ['', '', '', '', ''],
+      availability: '', otherAvailability: '', communication: [],
+      communicationOther: '', constraints: ''
+    })
+    setHasConstraints(false)
+    setErrors({})
+    setSuccessMessage('Submission has been uploaded!')
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (loading) return
     setSubmitted(true)
-  if (!formData.title) return  // stops submission if empty
+    if (!formData.title) return  // stops submission if empty
 
-    // validate at least one preferred communication selected
+      // validate at least one preferred communication selected todo: export to another funciton
     if (!formData.communication || formData.communication.length === 0) {
       setErrors((prev) => ({ ...prev, communication: 'Please select at least one communication method' }))
       return
     }
 
+    const formDataToSend = {
+        title: formData.title,
+        age: Number(formData.age),
+        gender: formData.gender === 'Other' ? formData.otherGender : formData.gender,
+        timezone: formData.timezone,
+        description: formData.description,
+        goals: formData.goals,
+        looking_for1: formData.lookingFor[0],
+        looking_for2: formData.lookingFor[1],
+        looking_for3: formData.lookingFor[2],
+        looking_for4: formData.lookingFor[3],
+        looking_for5: formData.lookingFor[4],
+        availability: formData.availability === 'Other'
+          ? formData.otherAvailability
+          : formData.availability,
+        communication: formData.communication.includes('Other')
+          ? [...formData.communication.filter((v) => v !== 'Other'), formData.communicationOther].join(', ')
+          : formData.communication.join(', '),
+        constraints: hasConstraints ? formData.constraints : ''
+      }
+    try {
+      setLoading(true)
+      const response = await fetch(SUBMISSION_ROUTE, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify(formDataToSend)
+        })
+
+      
+      if (!response.ok) {
+        const data = await response.json()
+        setErrors((prev) => ({
+          ...prev,
+          submit: data.error || 'Error submitting form. Please check required fields and try again.',
+        }))
+        return
+      }
+      handleSuccessfulSubmission() // TODO: maybe show a success message instead of navigating immediately?
+      } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: 'Network error. Please try again.',
+      }))
+    } finally {
+      setLoading(false)
+    }
     // TODO: send formData to Express backend (POST /submissions)
     // fields to include:
     //   userId         — from JWT token (extracted on the backend)
@@ -123,13 +191,6 @@ function Questionnaire() {
     //   availability   — formData.availability (if 'Other', use formData.otherAvailability)
     //   communication  — formData.communication (if includes 'Other', also send formData.communicationOther)
     //   constraints    — formData.constraints
-    setFormData({
-      title: '', age: null, gender: '', otherGender: '', timezone: formData.timezone,
-      description: '', goals: '', lookingFor: ['', '', '', '', ''],
-      availability: '', otherAvailability: '', communication: [],
-      communicationOther: '', constraints: ''
-    })
-    setHasConstraints(false)
   }
 
   // current detected offset (used to show as the default in the select)
@@ -316,7 +377,15 @@ function Questionnaire() {
         </div>
 
         {/* Submit Button */}
-        <button type="submit" className="btn">Submit</button>
+        <button type="submit" className="btn" disabled={loading}>
+          {loading ? 'Submitting...' : 'Submit'}
+        </button>
+
+        {successMessage && (
+          <div style={{ color: 'green', marginTop: 12 }}>
+            {successMessage}
+          </div>
+        )}
       </form>
 
       {/* Submissions */}

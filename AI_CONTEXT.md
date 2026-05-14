@@ -59,7 +59,7 @@ Frontend:
 - `frontend/src/contexts/SubmissionsContext.jsx` - localStorage-backed data layer for submissions, requests, conversations, messages, and anonymous viewer id.
 - `frontend/src/components/SignUp.jsx` - signup form with username text input, email input, password, and confirm password. Calls `${import.meta.env.VITE_API_URL}/auth/signup` with `{ username, email, password, confirmPassword }`, stores JWT in `localStorage.token`, stores the submitted username in `localStorage.username`, and navigates to `/questionnaire`.
 - `frontend/src/components/LogIn.jsx` - login form, calls `${import.meta.env.VITE_API_URL}/auth/login`, stores JWT in `localStorage.token`, stores returned username in `localStorage.username`, and navigates to `/questionnaire`.
-- `frontend/src/components/Questionnare.jsx` - questionnaire form. Filename is misspelled as `Questionnare`. It collects ticket/submission fields but currently does not call backend or context on submit.
+- `frontend/src/components/Questionnare.jsx` - questionnaire form. Filename is misspelled as `Questionnare`. It collects ticket/submission fields, submits them to backend `POST /submissions` with the JWT from `localStorage.token`, shows a loading button while the request is pending, and shows `Submission has been uploaded!` after success.
 - `frontend/src/components/SubmissionsBoard.jsx` - browses and filters submissions from context; can send/cancel connection requests.
 - `frontend/src/components/MyBoard.jsx` - shows current viewer submissions and sent requests; accepts/cancels requests and includes a chat box for accepted requests.
 - `frontend/src/components/Chats.jsx` - lists active conversations for the current viewer and allows sending local messages.
@@ -68,8 +68,10 @@ Frontend:
 - `frontend/src/test/setup.js` - Vitest setup file that imports `@testing-library/jest-dom/vitest`.
 - `frontend/.env.example` - committed frontend env template with `VITE_API_URL=http://localhost:3000`.
 - `frontend/src/test/components/Navbar.test.jsx` - React Testing Library tests for Navbar logged-out display, username dropdown, and logout behavior.
+- `frontend/src/test/components/Questionnare.test.jsx` - React Testing Library unit/component tests for mocked questionnaire submission behavior, including normalized `POST /submissions` payload, JWT authorization header, success message, and disabled loading submit button.
 - `frontend/src/test/integration/SignUp.integration.test.jsx` - real-backend integration tests for signup success and backend validation error display.
 - `frontend/src/test/integration/AuthFlow.integration.test.jsx` - real-backend integration test for signup, logout, failed login, successful login, route navigation, and logout.
+- `frontend/src/test/integration/QuestionnareSubmission.integration.test.jsx` - real-backend integration test for signing up, submitting a questionnaire ticket through the frontend, confirming it appears in `GET /submissions`, and deleting it directly with backend `DELETE /submissions/:id` for cleanup because the frontend has no delete-ticket UI yet.
 - `frontend/tasks/todo.txt` - notes required questionnaire fields and validation ideas.
 
 Backend:
@@ -144,9 +146,9 @@ npm run test -- --run
 npm run test:integration
 ```
 
-On this Windows setup, PowerShell may block `npm.ps1`; use `npm.cmd` instead, for example `npm.cmd run build`, `npm.cmd test -- --run`, and `npm.cmd run test:integration`.
+On this Windows setup, PowerShell may block `npm.ps1`; use `npm.cmd` instead, for example `npm.cmd run build`, `npm.cmd run test -- --run`, and `npm.cmd run test:integration`.
 
-`npm run test -- --run` runs quick component tests under `frontend/src/test/components`. `npm run test:integration` runs real-backend integration tests under `frontend/src/test/integration`; backend and PostgreSQL must be running, and these tests create real `testXXXX` users.
+`npm run test -- --run` runs quick component tests under `frontend/src/test/components`. On Windows PowerShell, use `npm.cmd run test -- --run`. `npm run test:integration` runs real-backend integration tests under `frontend/src/test/integration`; backend and PostgreSQL must be running, and these tests create real `testXXXX` users. The questionnaire submission integration test also creates a real submission and cleans it up through direct backend deletion.
 
 Backend production-ish start:
 
@@ -284,9 +286,9 @@ Conversation fields include:
 - Signup/login store JWTs in `localStorage`, but most app data does not use the JWT yet.
 - Backend submissions create/delete/list routes are mounted and covered by backend integration tests. Requests/conversations still have no backend routes.
 - `SubmissionsContext.jsx` uses `localStorage`, so data is per-browser and not shared between real users.
-- `Questionnare.jsx` currently resets form state on submit but does not add a submission to context or backend.
+- `Questionnare.jsx` now posts submissions to the backend and resets only after a successful response. It still does not add the created submission to local context, and requests/conversations/chats remain local-only.
 - `backend/src/models/User.js` is legacy and may be removable once auth/data model is stable.
-- Frontend has Vitest/React Testing Library component coverage for `Navbar` and real-backend integration coverage for signup/auth flows. Backend has Node test-runner integration coverage for submissions.
+- Frontend has Vitest/React Testing Library component coverage for `Navbar` and `Questionnare`, plus real-backend integration coverage for signup/auth flows and questionnaire submission creation. Backend has Node test-runner integration coverage for submissions.
 
 ## Development Conventions To Preserve
 
@@ -307,7 +309,6 @@ Conversation fields include:
 
 - Fix remaining text encoding artifacts in UI strings.
 - Decide whether to rename `Questionnare.jsx` to `Questionnaire.jsx` and update imports.
-- Wire questionnaire submit to backend `POST /submissions`.
 - Wire submissions board to backend `GET /submissions` instead of localStorage-only context data.
 - Implement `SubmissionController.listMine` and `GET /submissions/mine` with parameterized PostgreSQL queries.
 - Add backend tables/routes/controllers for requests, conversations, and messages.

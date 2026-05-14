@@ -15,6 +15,9 @@ login logic:
         - basic login logic
         - block requests from the user IP if it failed loggin up 5 times.
 
+submissions:
+- make sure you can get to Questeneer only if you are logged in.
+as well as required for submissionboard, my board.
 
 today 8.5.26:
 send the user name in json to the sign up.

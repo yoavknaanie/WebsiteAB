@@ -36,7 +36,7 @@ npm.cmd install -D vitest @testing-library/react @testing-library/jest-dom @test
 
 ## Quick Component Tests
 
-These tests do not require the backend or PostgreSQL.
+These tests do not require the backend or PostgreSQL. Backend requests are mocked where needed.
 
 Run:
 
@@ -49,7 +49,7 @@ On Windows PowerShell:
 
 ```powershell
 cd frontend
-npm.cmd test -- --run
+npm.cmd run test -- --run
 ```
 
 Current quick tests cover:
@@ -57,6 +57,16 @@ Current quick tests cover:
 - Navbar logged-out display.
 - Navbar username dropdown.
 - Navbar logout behavior.
+- Questionnaire submission request behavior.
+- Questionnaire submission success message.
+- Questionnaire loading state while a submission request is pending.
+
+The questionnaire component tests mock `fetch` and check that submitting the form sends a `POST /submissions` request with:
+
+- The saved JWT in the `Authorization` header.
+- Normalized form fields such as numeric `age`, custom gender, custom availability, `looking_for1` through `looking_for5`, and comma-separated communication methods.
+- A success message: `Submission has been uploaded!`.
+- A disabled `Submitting...` button while the request is still processing.
 
 ## Integration Tests
 
@@ -106,6 +116,10 @@ Current integration tests cover:
 - Failed login with correct user and wrong password.
 - Successful login.
 - Navbar preserving the username after route navigation.
+- Questionnaire submission creation through the frontend form.
+- Direct backend deletion of the created questionnaire submission for cleanup.
+
+The questionnaire submission integration test creates a real user, submits a real ticket to `POST /submissions`, confirms it appears in `GET /submissions`, then deletes it with `DELETE /submissions/:id`. The deletion is done directly through the backend API because the frontend does not currently provide a user-facing delete-ticket control.
 
 The `test:integration` script runs every test file under:
 
@@ -129,7 +143,7 @@ Run quick tests:
 
 ```powershell
 cd frontend
-npm.cmd test -- --run
+npm.cmd run test -- --run
 ```
 
 Run integration tests:
