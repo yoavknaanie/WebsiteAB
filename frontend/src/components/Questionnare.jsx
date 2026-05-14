@@ -180,17 +180,17 @@ function Questionnaire() {
     }
     // TODO: send formData to Express backend (POST /submissions)
     // fields to include:
-    //   userId         — from JWT token (extracted on the backend)
-    //   title          — formData.title
-    //   age            — formData.age
-    //   gender         — formData.gender (if 'Other', use formData.otherGender)
-    //   timezone       — formData.timezone
-    //   description    — formData.description
-    //   goals          — formData.goals
-    //   lookingFor     — formData.lookingFor.filter(Boolean)
-    //   availability   — formData.availability (if 'Other', use formData.otherAvailability)
-    //   communication  — formData.communication (if includes 'Other', also send formData.communicationOther)
-    //   constraints    — formData.constraints
+    //   userId         - from JWT token (extracted on the backend)
+    //   title          - formData.title
+    //   age            - formData.age
+    //   gender         - formData.gender (if 'Other', use formData.otherGender)
+    //   timezone       - formData.timezone
+    //   description    - formData.description
+    //   goals          - formData.goals
+    //   lookingFor     - formData.lookingFor.filter(Boolean)
+    //   availability   - formData.availability (if 'Other', use formData.otherAvailability)
+    //   communication  - formData.communication (if includes 'Other', also send formData.communicationOther)
+    //   constraints    - formData.constraints
   }
 
   // current detected offset (used to show as the default in the select)
@@ -244,7 +244,7 @@ function Questionnaire() {
               {timezoneOptions.map((t) => {
                 const val = `UTC ${t.key}`
                 const detected = getUTCOffset()
-                const label = `${val} — ${t.cities.join(', ')}${detected === val ? ' (detected)' : ''}`
+                const label = `${val} - ${t.cities.join(', ')}${detected === val ? ' (detected)' : ''}`
                 return <option key={t.key} value={val}>{label}</option>
               })}
             </select>
@@ -394,7 +394,7 @@ function Questionnaire() {
           <h3>My Submissions</h3>
           {submissions.map((sub, index) => (
             <div key={index} className="card">
-              <strong>{sub.title}</strong> — {sub.description} <br />
+              <strong>{sub.title}</strong> - {sub.description} <br />
               Age: {sub.age}, Gender: {sub.gender === 'Other' ? sub.otherGender : sub.gender} <br />
               Goals: {sub.goals} <br />
               Looking for: {sub.lookingFor.filter(Boolean).join(', ')} <br />
