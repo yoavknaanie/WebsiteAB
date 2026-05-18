@@ -79,4 +79,10 @@ steps for deployment:
   > Built and deployed AccountaBuddy, a full-stack React/Express/PostgreSQL app for creating and browsing accountability partner requests. Implemented JWT
   > auth, PostgreSQL persistence, protected submission routes, frontend/backend validation, and automated unit/integration tests.
 
-  That sounds much stronger than just “React app”.
+18.05
+0. correct to Questionnaire
+1. duplicate the Landing component.
+2. Landing: enable only, get started, log in, how its work.
+3. HomePage: enable only Questionnaire, submission, myboard.
+
+for each page
