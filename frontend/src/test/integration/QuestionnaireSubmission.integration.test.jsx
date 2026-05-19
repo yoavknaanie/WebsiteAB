@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
-import Questionnaire from '../../components/Questionnare'
+import Questionnaire from '../../components/Questionnaire'
 import Signup from '../../components/SignUp'
 
 const API_URL = import.meta.env.VITE_API_URL

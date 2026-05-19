@@ -46,7 +46,7 @@ steps for deployment:
      test-only cleanup behavior.
   4. Fix obvious polish issues
      Especially:
-      - rename Questionnare.jsx to Questionnaire.jsx, or at least leave a note if you keep it
+      - keep Questionnaire.jsx naming consistent across imports and tests
       - fix mojibake text like ג€”
       - fix React warning: age: null should probably be age: '' for controlled input
       - show errors.submit in the UI, not only success

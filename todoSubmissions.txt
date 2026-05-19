@@ -199,6 +199,6 @@ Suggested create response:
 
 - Do not rewrite the frontend board first.
 - First make sure `POST /submissions` works from the backend.
-- Then update `Questionnare.jsx` to send the JWT and form data.
+- Then update `Questionnaire.jsx` to send the JWT and form data.
 - Then update `SubmissionsBoard.jsx` to load real backend submissions.
 - Keep localStorage fallback only if intentionally needed during migration.
