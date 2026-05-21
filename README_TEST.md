@@ -1,6 +1,6 @@
 # AccountaBuddy Test Guide
 
-This project currently has frontend component tests and frontend integration tests.
+This project has frontend component tests, frontend integration tests, and backend integration tests.
 
 ## Test Tools
 
@@ -57,16 +57,30 @@ Current quick tests cover:
 - Navbar logged-out display.
 - Navbar username dropdown.
 - Navbar logout behavior.
+- Navbar ignores stale `localStorage` auth values after auth moved to `sessionStorage`.
+- Navbar logo sends logged-in users to `/home`.
+- Navbar `Log In` button sends logged-out users to `/login`.
+- Landing page public actions: `Get Started`, `Log in`, and `How it works`.
+- Landing page does not show logged-in app navigation buttons.
+- Home page app navigation for Questionnaire, Submissions, and My Board.
+- Home page keeps Chats hidden while chat is not fully implemented.
+- Hero button navigation to signup and login.
 - Questionnaire submission request behavior.
 - Questionnaire submission success message.
 - Questionnaire loading state while a submission request is pending.
+- Submissions board backend loading from `GET /submissions`.
+- Submissions board backend field normalization for `created_at`, `user_id`, `looking_for1` through `looking_for5`, and communication values.
+- Submissions board backend error display.
+- Submissions board frontend filtering by looking-for keywords and communication methods.
 
 The questionnaire component tests mock `fetch` and check that submitting the form sends a `POST /submissions` request with:
 
-- The saved JWT in the `Authorization` header.
+- The saved `sessionStorage` JWT in the `Authorization` header.
 - Normalized form fields such as numeric `age`, custom gender, custom availability, `looking_for1` through `looking_for5`, and comma-separated communication methods.
 - A success message: `Submission has been uploaded!`.
 - A disabled `Submitting...` button while the request is still processing.
+
+The submissions board component tests mock `fetch` for `GET /submissions` and use a mocked `SubmissionsContext.Provider` so the tests can focus on backend loading, normalization, rendering, and filtering without depending on local request/conversation storage.
 
 ## Integration Tests
 
@@ -112,14 +126,16 @@ Current integration tests cover:
 
 - Successful signup with a generated `testXXXX` username.
 - Signup validation errors from the backend.
-- Logout clearing frontend `localStorage`.
+- Signup navigating to `/home`.
+- Logout clearing frontend `sessionStorage`.
 - Failed login with correct user and wrong password.
 - Successful login.
 - Navbar preserving the username after route navigation.
+- Logged-in navbar logo navigation to `/home`.
 - Questionnaire submission creation through the frontend form.
 - Direct backend deletion of the created questionnaire submission for cleanup.
 
-The questionnaire submission integration test creates a real user, submits a real ticket to `POST /submissions`, confirms it appears in `GET /submissions`, then deletes it with `DELETE /submissions/:id`. The deletion is done directly through the backend API because the frontend does not currently provide a user-facing delete-ticket control.
+The questionnaire submission integration test creates a real user, lands on `/home`, navigates to the questionnaire, submits a real ticket to `POST /submissions`, confirms it appears in `GET /submissions`, then deletes it with `DELETE /submissions/:id`. The deletion is done directly through the backend API because the frontend does not currently provide a user-facing delete-ticket control.
 
 The `test:integration` script runs every test file under:
 
@@ -189,5 +205,14 @@ Run the frontend production build:
 
 ```powershell
 cd frontend
+npm.cmd run build
+```
+
+Recommended pre-commit frontend check:
+
+```powershell
+cd frontend
+npm.cmd run test -- --run
+npm.cmd run test:integration
 npm.cmd run build
 ```

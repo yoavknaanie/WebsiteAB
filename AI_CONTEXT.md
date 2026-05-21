@@ -71,8 +71,10 @@ Frontend:
 - `frontend/src/components/HowItWorks.jsx`, `Footer.jsx` - supporting landing/home UI.
 - `frontend/src/test/setup.js` - Vitest setup file that imports `@testing-library/jest-dom/vitest`.
 - `frontend/.env.example` - committed frontend env template with `VITE_API_URL=http://localhost:3000`.
-- `frontend/src/test/components/Navbar.test.jsx` - React Testing Library tests for Navbar logged-out display, username dropdown, and logout behavior.
+- `frontend/src/test/components/Navbar.test.jsx` - React Testing Library tests for Navbar logged-out display, username dropdown, logout behavior, stale `localStorage` auth being ignored, logged-in logo navigation to `/home`, and logged-out account-button navigation to `/login`.
+- `frontend/src/test/components/LandingHome.test.jsx` - React Testing Library tests for public landing actions, hidden logged-in app actions on landing, Home navigation buttons, and Chats staying hidden while chat is not fully implemented.
 - `frontend/src/test/components/Questionnaire.test.jsx` - React Testing Library unit/component tests for mocked questionnaire submission behavior, including normalized `POST /submissions` payload, JWT authorization header, success message, and disabled loading submit button.
+- `frontend/src/test/components/SubmissionsBoard.test.jsx` - React Testing Library tests for mocked backend `GET /submissions` loading, backend field normalization, rendering, error display, and frontend filters for looking-for keywords and communication methods. Uses a mocked `SubmissionsContext.Provider` to isolate board behavior from local request/conversation storage.
 - `frontend/src/test/integration/SignUp.integration.test.jsx` - real-backend integration tests for signup success and backend validation error display.
 - `frontend/src/test/integration/AuthFlow.integration.test.jsx` - real-backend integration test for signup, logout, failed login, successful login, route navigation, and logout.
 - `frontend/src/test/integration/QuestionnaireSubmission.integration.test.jsx` - real-backend integration test for signing up, submitting a questionnaire ticket through the frontend, confirming it appears in `GET /submissions`, and deleting it directly with backend `DELETE /submissions/:id` for cleanup because the frontend has no delete-ticket UI yet.
@@ -153,7 +155,7 @@ npm run test:integration
 
 On this Windows setup, PowerShell may block `npm.ps1`; use `npm.cmd` instead, for example `npm.cmd run build`, `npm.cmd run test -- --run`, and `npm.cmd run test:integration`.
 
-`npm run test -- --run` runs quick component tests under `frontend/src/test/components`. On Windows PowerShell, use `npm.cmd run test -- --run`. `npm run test:integration` runs real-backend integration tests under `frontend/src/test/integration`; backend and PostgreSQL must be running, and these tests create real `testXXXX` users. The questionnaire submission integration test also creates a real submission and cleans it up through direct backend deletion.
+`npm run test -- --run` runs quick component tests under `frontend/src/test/components`. On Windows PowerShell, use `npm.cmd run test -- --run`. Current quick tests cover Navbar, Landing/Home, Questionnaire, and SubmissionsBoard behavior. `npm run test:integration` runs real-backend integration tests under `frontend/src/test/integration`; backend and PostgreSQL must be running, and these tests create real `testXXXX` users. The questionnaire submission integration test also creates a real submission and cleans it up through direct backend deletion.
 
 Backend production-ish start:
 
@@ -294,7 +296,7 @@ Conversation fields include:
 - `Questionnaire.jsx` now posts submissions to the backend and resets only after a successful response. It still does not add the created submission to local context, and requests/conversations/chats remain local-only.
 - `SubmissionsBoard.jsx` uses backend `GET /submissions`, but filtering is still frontend-side against the loaded page of results. Add backend-side filters later for accurate filtering across all submissions.
 - `backend/src/models/User.js` is legacy and may be removable once auth/data model is stable.
-- Frontend has Vitest/React Testing Library component coverage for `Navbar` and `Questionnaire`, plus real-backend integration coverage for signup/auth flows and questionnaire submission creation. Backend has Node test-runner integration coverage for submissions.
+- Frontend has Vitest/React Testing Library component coverage for `Navbar`, `Landing`/`Home`, `Questionnaire`, and `SubmissionsBoard`, plus real-backend integration coverage for signup/auth flows and questionnaire submission creation. Backend has Node test-runner integration coverage for submissions.
 
 ## Development Conventions To Preserve
 
