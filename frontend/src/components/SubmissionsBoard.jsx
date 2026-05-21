@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSubmissions } from '../contexts/SubmissionsContext'
 
@@ -25,7 +25,10 @@ function Composer({ onSend, onCancel, initialMessage = '' }) {
 }
 
 function SubmissionsBoard() {
-  const { submissions, requests, addRequest, cancelRequest, viewerId } = useSubmissions()
+  const { requests, addRequest, cancelRequest, viewerId } = useSubmissions()
+  const [submissions, setSubmissions] = useState([])
+  const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(true)
+  const [submissionsError, setSubmissionsError] = useState('')
   const [filterAvailability, setFilterAvailability] = useState('')
   const [filterComms, setFilterComms] = useState([])
   const [filterLookingFor, setFilterLookingFor] = useState('')
@@ -38,6 +41,59 @@ function SubmissionsBoard() {
   const [openCancelId, setOpenCancelId] = useState(null)
 
   const listRef = useRef(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadSubmissions() {
+      setIsLoadingSubmissions(true)
+      setSubmissionsError('')
+
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/submissions`)
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Could not load submissions.')
+        }
+
+        const normalizedSubmissions = (data.submissions || []).map((submission) => ({
+          ...submission,
+          createdAt: submission.created_at,
+          ownerId: submission.user_id,
+          lookingFor: [
+            submission.looking_for1,
+            submission.looking_for2,
+            submission.looking_for3,
+            submission.looking_for4,
+            submission.looking_for5,
+          ].filter(Boolean),
+          communication: typeof submission.communication === 'string'
+            ? submission.communication.split(',').map((item) => item.trim()).filter(Boolean)
+            : submission.communication,
+        }))
+
+        if (isMounted) {
+          setSubmissions(normalizedSubmissions)
+        }
+      } catch (error) {
+        if (isMounted) {
+          setSubmissionsError(error.message)
+          setSubmissions([])
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingSubmissions(false)
+        }
+      }
+    }
+
+    loadSubmissions()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const toggleComm = (label) => {
     setFilterComms((prev) => (prev.includes(label) ? prev.filter((c) => c !== label) : [...prev, label]))
@@ -146,7 +202,11 @@ function SubmissionsBoard() {
     <section className="section">
       <h2>Submissions Board</h2>
 
-      {(!submissions || submissions.length === 0) ? (
+      {isLoadingSubmissions ? (
+        <p>Loading submissions...</p>
+      ) : submissionsError ? (
+        <p>{submissionsError}</p>
+      ) : (!submissions || submissions.length === 0) ? (
         <p>No submissions yet. Be the first to submit the questionnaire!</p>
       ) : (
         <>

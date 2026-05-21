@@ -127,6 +127,38 @@ The `test:integration` script runs every test file under:
 frontend/src/test/integration
 ```
 
+## Backend Tests
+
+These tests call the real backend and use the real PostgreSQL database.
+
+Backend tests require:
+
+- PostgreSQL running.
+- `backend/.env` configured with `DATABASE_URL` and `JWT_SECRET`.
+
+If the database tables have not been created yet, run the migrations first:
+
+```powershell
+cd backend
+npm.cmd run db:init
+```
+
+Run all backend tests:
+
+```powershell
+cd backend
+npm.cmd test
+```
+
+Run the submissions backend tests only:
+
+```powershell
+cd backend
+npm.cmd run test:submissions
+```
+
+On this Windows setup, use `npm.cmd` because PowerShell may block `npm.ps1`.
+
 ## Database Note
 
 The integration tests intentionally create real users with names like:
