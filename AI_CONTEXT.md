@@ -19,8 +19,9 @@ The current implementation is partly backend-backed and partly local-only:
 
 - Auth is implemented against Express + PostgreSQL, including username, email, password hashing, and JWT creation.
 - Backend submissions support creating, deleting, and listing submission tickets through Express + PostgreSQL.
-- Submissions, requests, conversations, viewer identity, and chat messages currently live in browser `localStorage` through React context.
-- The questionnaire has TODO comments for replacing local/frontend submission behavior with Express backend calls.
+- The frontend stores auth token and username in `sessionStorage`, so a normal tab/session close returns the user to a logged-out state.
+- Requests, conversations, viewer identity, and chat messages currently live in browser `localStorage` through React context.
+- Questionnaire submission creation and public submissions board loading are wired to the Express backend.
 
 ## Tech Stack
 
@@ -57,14 +58,17 @@ Frontend:
 - `frontend/src/App.jsx` - route table and top-level layout. Always renders `Navbar`.
 - `frontend/src/index.css` and `frontend/src/App.css` - global styling.
 - `frontend/src/contexts/SubmissionsContext.jsx` - localStorage-backed data layer for submissions, requests, conversations, messages, and anonymous viewer id.
-- `frontend/src/components/SignUp.jsx` - signup form with username text input, email input, password, and confirm password. Calls `${import.meta.env.VITE_API_URL}/auth/signup` with `{ username, email, password, confirmPassword }`, stores JWT in `localStorage.token`, stores the submitted username in `localStorage.username`, and navigates to `/questionnaire`.
-- `frontend/src/components/LogIn.jsx` - login form, calls `${import.meta.env.VITE_API_URL}/auth/login`, stores JWT in `localStorage.token`, stores returned username in `localStorage.username`, and navigates to `/questionnaire`.
-- `frontend/src/components/Questionnaire.jsx` - questionnaire form. It collects ticket/submission fields, submits them to backend `POST /submissions` with the JWT from `localStorage.token`, shows a loading button while the request is pending, and shows `Submission has been uploaded!` after success.
-- `frontend/src/components/SubmissionsBoard.jsx` - browses and filters submissions from context; can send/cancel connection requests.
+- `frontend/src/components/SignUp.jsx` - signup form with username text input, email input, password, and confirm password. Calls `${import.meta.env.VITE_API_URL}/auth/signup` with `{ username, email, password, confirmPassword }`, stores JWT in `sessionStorage.token`, stores the submitted username in `sessionStorage.username`, and navigates to `/home`.
+- `frontend/src/components/LogIn.jsx` - login form, calls `${import.meta.env.VITE_API_URL}/auth/login`, stores JWT in `sessionStorage.token`, stores returned username in `sessionStorage.username`, and navigates to `/home`.
+- `frontend/src/components/Questionnaire.jsx` - questionnaire form. It collects ticket/submission fields, submits them to backend `POST /submissions` with the JWT from `sessionStorage.token`, shows a loading button while the request is pending, and shows `Submission has been uploaded!` after success.
+- `frontend/src/components/SubmissionsBoard.jsx` - loads public submissions from backend `GET /submissions`, normalizes backend fields such as `created_at`, `user_id`, and `looking_for1` through `looking_for5` for the current UI, filters them in the browser, and can send/cancel local connection requests.
 - `frontend/src/components/MyBoard.jsx` - shows current viewer submissions and sent requests; accepts/cancels requests and includes a chat box for accepted requests.
 - `frontend/src/components/Chats.jsx` - lists active conversations for the current viewer and allows sending local messages.
-- `frontend/src/components/Navbar.jsx` - top navigation. Reads `localStorage.username`; if present, shows the username in the top-right button. Clicking the username opens a `Log Out` button that clears `localStorage.token` and `localStorage.username`, then returns the navbar to `Log In`. Uses `useLocation` to reread username after route changes such as login/signup navigation.
-- `frontend/src/components/Hero.jsx`, `HowItWorks.jsx`, `Footer.jsx`, `Landing.jsx` - landing/marketing UI.
+- `frontend/src/components/Navbar.jsx` - top navigation. Reads `sessionStorage.username`; if present, shows the username in the top-right button. Clicking the username opens a `Log Out` button that clears `sessionStorage.token` and `sessionStorage.username`, removes old auth leftovers from `localStorage`, navigates to `/`, and returns the navbar to `Log In`. The top-left Accountabuddy logo sends logged-in users to `/home` and logged-out users to `/`.
+- `frontend/src/components/Hero.jsx` - public landing hero. Shows `Get Started` and `Log in` as green primary buttons, with `How it works` as a white outlined button on the next line.
+- `frontend/src/components/Landing.jsx` - public landing page that renders `Hero` and `HowItWorks`.
+- `frontend/src/components/Home.jsx` - logged-in home/dashboard page with navigation buttons for Questionnaire, Submissions, and My Board. The Chats button is currently commented out because chat is not fully implemented yet. Also renders `HowItWorks`.
+- `frontend/src/components/HowItWorks.jsx`, `Footer.jsx` - supporting landing/home UI.
 - `frontend/src/test/setup.js` - Vitest setup file that imports `@testing-library/jest-dom/vitest`.
 - `frontend/.env.example` - committed frontend env template with `VITE_API_URL=http://localhost:3000`.
 - `frontend/src/test/components/Navbar.test.jsx` - React Testing Library tests for Navbar logged-out display, username dropdown, and logout behavior.
@@ -95,6 +99,7 @@ Backend:
 Frontend routes in `frontend/src/App.jsx`:
 
 - `/` - landing page
+- `/home` - logged-in home/dashboard page
 - `/signup` - signup form
 - `/login` - login form
 - `/questionnaire` - create looking-for-buddy ticket form
@@ -236,8 +241,9 @@ Current auth behavior:
 - Username is checked before insert; database unique-constraint errors are also handled for race conditions.
 - Email is trimmed/lowercased before validation and insert.
 - Password is hashed with bcrypt before storage.
-- Successful login returns the user's username so the frontend can store it in `localStorage.username` for the Navbar display.
-- Frontend logout is local-only for now: it removes `localStorage.token` and `localStorage.username`; no backend logout route exists yet.
+- Successful login returns the user's username so the frontend can store it in `sessionStorage.username` for the Navbar display.
+- Successful signup/login store the JWT in `sessionStorage.token` and username in `sessionStorage.username` for frontend session display.
+- Frontend logout is local-only for now: it removes `sessionStorage.token` and `sessionStorage.username`, also removes old `localStorage.token` and `localStorage.username` leftovers, and navigates to `/`; no backend logout route exists yet.
 
 Local frontend storage keys in `SubmissionsContext.jsx`:
 
@@ -282,10 +288,11 @@ Conversation fields include:
 ## Known Gaps And Risks
 
 - Some files contain mojibake/encoding artifacts where dashes, arrows, or ellipses were probably intended.
-- Signup/login store JWTs in `localStorage`, but most app data does not use the JWT yet.
+- Signup/login store JWTs in `sessionStorage`; normal tab/session close should return the frontend to logged-out state.
 - Backend submissions create/delete/list routes are mounted and covered by backend integration tests. Requests/conversations still have no backend routes.
 - `SubmissionsContext.jsx` uses `localStorage`, so data is per-browser and not shared between real users.
 - `Questionnaire.jsx` now posts submissions to the backend and resets only after a successful response. It still does not add the created submission to local context, and requests/conversations/chats remain local-only.
+- `SubmissionsBoard.jsx` uses backend `GET /submissions`, but filtering is still frontend-side against the loaded page of results. Add backend-side filters later for accurate filtering across all submissions.
 - `backend/src/models/User.js` is legacy and may be removable once auth/data model is stable.
 - Frontend has Vitest/React Testing Library component coverage for `Navbar` and `Questionnaire`, plus real-backend integration coverage for signup/auth flows and questionnaire submission creation. Backend has Node test-runner integration coverage for submissions.
 
@@ -307,8 +314,8 @@ Conversation fields include:
 ## Good Next Steps
 
 - Fix remaining text encoding artifacts in UI strings.
-- Wire submissions board to backend `GET /submissions` instead of localStorage-only context data.
 - Implement `SubmissionController.listMine` and `GET /submissions/mine` with parameterized PostgreSQL queries.
+- Add backend-side filtering/search query params to `GET /submissions`.
 - Add backend tables/routes/controllers for requests, conversations, and messages.
 - Add signup/login rate limiting middleware.
 - Add backend auth tests for signup/login behavior.

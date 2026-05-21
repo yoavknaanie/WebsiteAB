@@ -6,7 +6,8 @@ import Questionnaire from '../../components/Questionnaire'
 describe('Questionnaire submission', () => {
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem('token', 'test-token')
+    sessionStorage.clear()
+    sessionStorage.setItem('token', 'test-token')
     vi.stubGlobal(
       'fetch',
       vi.fn(() =>

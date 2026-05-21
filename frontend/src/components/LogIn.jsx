@@ -40,9 +40,9 @@ function Login() {
         return
       }
 
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('username', data.username)
-      navigate('/questionnaire') // todo: maybe navigate to dashboard instead?
+      sessionStorage.setItem('token', data.token)
+      sessionStorage.setItem('username', data.username)
+      navigate('/home')
     } catch (err) {
       setError(SERVER_ERROR)
     } finally {

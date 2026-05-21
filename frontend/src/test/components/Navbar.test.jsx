@@ -7,6 +7,7 @@ import Navbar from '../../components/Navbar'
 describe('Navbar', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
   })
 
   afterEach(() => {
@@ -24,7 +25,7 @@ describe('Navbar', () => {
   })
 
   test('shows the saved username and opens the logout menu', async () => {
-    localStorage.setItem('username', 'yoav')
+    sessionStorage.setItem('username', 'yoav')
     const user = userEvent.setup()
 
     render(
@@ -42,9 +43,9 @@ describe('Navbar', () => {
     expect(screen.getByRole('button', { name: 'Log Out' })).toBeInTheDocument()
   })
 
-  test('logs out by clearing localStorage and showing Log In again', async () => {
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('username', 'yoav')
+  test('logs out by clearing sessionStorage and showing Log In again', async () => {
+    sessionStorage.setItem('token', 'test-token')
+    sessionStorage.setItem('username', 'yoav')
     const user = userEvent.setup()
 
     render(
@@ -56,8 +57,8 @@ describe('Navbar', () => {
     await user.click(screen.getByRole('button', { name: 'yoav' }))
     await user.click(screen.getByRole('button', { name: 'Log Out' }))
 
-    expect(localStorage.getItem('token')).toBeNull()
-    expect(localStorage.getItem('username')).toBeNull()
+    expect(sessionStorage.getItem('token')).toBeNull()
+    expect(sessionStorage.getItem('username')).toBeNull()
     expect(screen.getByRole('button', { name: 'Log In' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'yoav' })).not.toBeInTheDocument()
   })

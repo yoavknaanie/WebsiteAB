@@ -1,8 +1,12 @@
+import Hero from './Hero'
+import HowItWorks from './HowItWorks'
+
 function Landing() {
   return (
-    <div>
-      <h1>Welcome to your dashboard!</h1>
-    </div>
+    <>
+      <Hero />
+      <HowItWorks />
+    </>
   )
 }
 

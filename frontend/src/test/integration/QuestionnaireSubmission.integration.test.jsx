@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import Questionnaire from '../../components/Questionnaire'
 import Signup from '../../components/SignUp'
@@ -8,11 +8,21 @@ import Signup from '../../components/SignUp'
 const API_URL = import.meta.env.VITE_API_URL
 const randomNumber = () => Math.floor(1000 + Math.random() * 9000)
 
+function TestHome() {
+  return (
+    <section>
+      <h1>Home page</h1>
+      <Link to="/questionnaire">Questionnaire</Link>
+    </section>
+  )
+}
+
 const renderSignupToQuestionnaire = () => {
   return render(
     <MemoryRouter initialEntries={['/signup']}>
       <Routes>
         <Route path="/signup" element={<Signup />} />
+        <Route path="/home" element={<TestHome />} />
         <Route path="/questionnaire" element={<Questionnaire />} />
       </Routes>
     </MemoryRouter>,
@@ -27,6 +37,9 @@ const signupThroughBackend = async ({ username, email, password }) => {
   await user.type(screen.getByLabelText('Password'), password)
   await user.type(screen.getByLabelText('Confirm Password'), password)
   await user.click(screen.getByRole('button', { name: 'Sign Up' }))
+
+  expect(await screen.findByRole('heading', { name: 'Home page' })).toBeInTheDocument()
+  await user.click(screen.getByRole('link', { name: 'Questionnaire' }))
 
   expect(await screen.findByRole('heading', { name: 'Looking for a Buddy Questionnaire' })).toBeInTheDocument()
 }
@@ -66,7 +79,7 @@ const findCreatedSubmission = async (title) => {
 }
 
 const deleteSubmission = async (submissionId) => {
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
 
   const response = await fetch(`${API_URL}/submissions/${submissionId}`, {
     method: 'DELETE',
@@ -81,6 +94,7 @@ const deleteSubmission = async (submissionId) => {
 describe('Questionnaire submission integration with backend', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
   })
 
   afterEach(() => {

@@ -4,23 +4,31 @@ import { useLocation, useNavigate } from "react-router-dom"
 function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [username, setUsername] = useState(() => localStorage.getItem('username'))
+  const [username, setUsername] = useState(() => sessionStorage.getItem('username'))
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const isLoggedIn = Boolean(username)
 
   useEffect(() => {
-    setUsername(localStorage.getItem('username'))
+    setUsername(sessionStorage.getItem('username'))
     setIsMenuOpen(false)
   }, [location.pathname])
 
   const handleLogout = () => {
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('username')
     localStorage.removeItem('token')
     localStorage.removeItem('username')
     setUsername(null)
     setIsMenuOpen(false)
+    navigate('/')
   }
 
   const goToHero = () => {
+    if (isLoggedIn) {
+      navigate('/home')
+      return
+    }
+
     // Navigate to "/" and scroll to hero after page loads
     navigate('/', { replace: false }) // go to home page
     setTimeout(() => {
