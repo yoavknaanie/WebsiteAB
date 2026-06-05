@@ -6,7 +6,9 @@
   "scripts": {
     "db:init": "node scripts/initDb.js",
     "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test",
+    "test:submissions": "node --test test/submissions.test.js"
   },
   "keywords": [],
   "author": "",

@@ -43,9 +43,9 @@ function Signup() {
       }
 
       // Store the JWT token so future requests can prove who the user is
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('username', username)
-      navigate('/questionnaire')
+      sessionStorage.setItem('token', data.token)
+      sessionStorage.setItem('username', username)
+      navigate('/home')
     } catch (err) {
       setError('Could not connect to the server. Please try again.')
     } finally {

@@ -65,6 +65,37 @@ Suggested indexes:
 - Return `401 Unauthorized` when the token is missing, invalid, or expired.
 - Use this middleware before protected submission routes.
 
+
+  Signup route:
+
+  Frontend
+    ↓
+  POST /auth/signup
+    ↓
+  index.js
+    ↓
+  authRoutes.js
+    ↓
+  AuthController.signup
+    ↓
+  create user
+
+  Submission route:
+
+  Frontend
+    ↓
+  POST /submissions with JWT token
+    ↓
+  index.js
+    ↓
+  submissionRoutes.js
+    ↓
+  authMiddleware checks token
+    ↓
+  SubmissionController.create
+    ↓
+  create submission for req.userId
+
 5. Add backend route file
 
 - Create:
@@ -168,6 +199,6 @@ Suggested create response:
 
 - Do not rewrite the frontend board first.
 - First make sure `POST /submissions` works from the backend.
-- Then update `Questionnare.jsx` to send the JWT and form data.
+- Then update `Questionnaire.jsx` to send the JWT and form data.
 - Then update `SubmissionsBoard.jsx` to load real backend submissions.
 - Keep localStorage fallback only if intentionally needed during migration.

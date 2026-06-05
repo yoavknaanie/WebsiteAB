@@ -15,12 +15,10 @@ function Hero() {
       </p>
 
       <div style={styles.actions}>
-        <button style={styles.primary} onClick={() => navigate('/signup')}>Get Started</button>
-        <button style={styles.primary} onClick={() => navigate('/questionnaire')}>Questionnaire</button>
-        <button style={styles.primary} onClick={() => navigate('/submissions')}>Submissions</button>
-        <button style={styles.primary} onClick={() => navigate('/myboard')}>My Board</button>
-        <button style={styles.primary} onClick={() => navigate('/chats')}>Chats</button>
-        <button style={styles.secondary} onClick={() => navigate('/login')}>Log in</button>
+        <div style={styles.primaryActions}>
+          <button style={styles.primary} onClick={() => navigate('/signup')}>Get Started</button>
+          <button style={styles.primary} onClick={() => navigate('/login')}>Log in</button>
+        </div>
         <a href="#how-it-works" style={styles.secondary}>
           How it works
         </a>
@@ -53,6 +51,15 @@ const styles = {
   },
 
   actions: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '1rem',
+    flexWrap: 'wrap'
+  },
+
+  primaryActions: {
     display: 'flex',
     justifyContent: 'center',
     gap: '1rem',

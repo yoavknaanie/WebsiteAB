@@ -15,6 +15,9 @@ login logic:
         - basic login logic
         - block requests from the user IP if it failed loggin up 5 times.
 
+submissions:
+- make sure you can get to Questeneer only if you are logged in.
+as well as required for submissionboard, my board.
 
 today 8.5.26:
 send the user name in json to the sign up.
@@ -28,3 +31,58 @@ update login bottom to the user name
 For better understanding:
 video about sql indexing:
 https://www.youtube.com/watch?v=-qNSXK7s7_w
+
+steps for deployment:
+ Before Publishing
+  Highest-value remaining work:
+
+  1. Finish backend-backed submission browsing
+     Right now the questionnaire posts to backend, but SubmissionsBoard.jsx still uses localStorage context. For a deployed demo, users should be able to
+     create a ticket and then see it on the public board from GET /submissions.
+  2. Add “My submissions” from backend
+     Implement GET /submissions/mine and wire MyBoard.jsx to it. This proves auth ownership and real user data separation.
+  3. Add delete ticket UI
+     Backend already supports DELETE /submissions/:id. Add a frontend delete button for the logged-in user’s own submissions. This also removes the awkward
+     test-only cleanup behavior.
+  4. Fix obvious polish issues
+     Especially:
+      - keep Questionnaire.jsx naming consistent across imports and tests
+      - fix mojibake text like ג€”
+      - fix React warning: age: null should probably be age: '' for controlled input
+      - show errors.submit in the UI, not only success
+  5. Protect routes
+     /questionnaire, /myboard, and /chats should redirect to /login if no token exists. This is a simple feature that shows product thinking.
+  6. Improve README
+     Your root README should clearly say:
+      - what the app does
+      - what is implemented
+      - what is still local-only
+      - test commands
+      - deployment link
+      - screenshots or a short demo GIF
+  A clean deployment setup would be:
+
+  - Frontend: Vercel for the Vite React app. Vercel has official Vite deployment support and Vite env vars need the VITE_ prefix. Source:
+    https://vercel.com/docs/frameworks/frontend/vite
+  - Database: Render Postgres or Supabase Postgres. If using Supabase with a server backend, pay attention to connection pooling. Source:
+    https://supabase.com/docs/guides/database/connection-management
+
+  - Frontend on Vercel:
+
+    VITE_API_URL=https://your-backend-url
+
+  - Backend on Render:
+
+    PORT=3000
+
+
+  > Built and deployed AccountaBuddy, a full-stack React/Express/PostgreSQL app for creating and browsing accountability partner requests. Implemented JWT
+  > auth, PostgreSQL persistence, protected submission routes, frontend/backend validation, and automated unit/integration tests.
+
+18.05
+0. correct to Questionnaire
+1. duplicate the Landing component.
+2. Landing: enable only, get started, log in, how its work.
+3. HomePage: enable only Questionnaire, submission, myboard.
+
+for each page

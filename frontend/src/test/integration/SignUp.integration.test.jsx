@@ -9,12 +9,12 @@ const randomNumber = () => Math.floor(1000 + Math.random() * 9000)
 
 const renderSignup = () => {
   // Render the signup component inside a small test router.
-  // This lets the test verify that navigate('/questionnaire') works.
+  // This lets the test verify that navigate('/home') works.
   return render(
     <MemoryRouter initialEntries={['/signup']}>
       <Routes>
         <Route path="/signup" element={<Signup />} />
-        <Route path="/questionnaire" element={<h1>Questionnaire page</h1>} />
+        <Route path="/home" element={<h1>Home page</h1>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -46,8 +46,9 @@ const submitSignupForm = async ({ username, email, password, submitDirectly = fa
 
 describe('Signup integration with backend', () => {
   beforeEach(() => {
-    // Each test starts with a clean browser-like localStorage.
+    // Each test starts with clean browser-like storage.
     localStorage.clear()
+    sessionStorage.clear()
   })
 
   afterEach(() => {
@@ -55,7 +56,7 @@ describe('Signup integration with backend', () => {
     cleanup()
   })
 
-  test('creates a user and navigates to questionnaire', async () => {
+  test('creates a user and navigates to home', async () => {
     // This test calls the real backend and creates a real database user.
     const id = randomNumber()
     const username = `test${id}`
@@ -69,11 +70,11 @@ describe('Signup integration with backend', () => {
       password,
     })
 
-    // findByRole waits until the questionnaire heading appears after navigation.
-    expect(await screen.findByRole('heading', { name: 'Questionnaire page' })).toBeInTheDocument()
-    // Successful signup should store auth/session data in localStorage.
-    expect(localStorage.getItem('token')).toBeTruthy()
-    expect(localStorage.getItem('username')).toBe(username)
+    // findByRole waits until the home heading appears after navigation.
+    expect(await screen.findByRole('heading', { name: 'Home page' })).toBeInTheDocument()
+    // Successful signup should store auth/session data in sessionStorage.
+    expect(sessionStorage.getItem('token')).toBeTruthy()
+    expect(sessionStorage.getItem('username')).toBe(username)
   })
 
   test('shows an error for a password shorter than 8 characters', async () => {
@@ -89,7 +90,7 @@ describe('Signup integration with backend', () => {
 
     // The form should stay on signup instead of navigating after a backend error.
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: 'Questionnaire page' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Home page' })).not.toBeInTheDocument()
     })
     // The exact backend wording may change, so this checks for the important idea.
     expect(await screen.findByText(/password.*8|8.*password|at least/i)).toBeInTheDocument()
@@ -108,7 +109,7 @@ describe('Signup integration with backend', () => {
     })
 
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: 'Questionnaire page' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Home page' })).not.toBeInTheDocument()
     })
     // Verify the frontend displays the backend email validation error.
     expect(await screen.findByText(/invalid email|email format/i)).toBeInTheDocument()
@@ -124,7 +125,7 @@ describe('Signup integration with backend', () => {
     })
 
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: 'Questionnaire page' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Home page' })).not.toBeInTheDocument()
     })
     // Verify the frontend displays the backend username minimum-length error.
     expect(await screen.findByText(/username.*at least|at least.*username|3 characters/i)).toBeInTheDocument()
@@ -140,7 +141,7 @@ describe('Signup integration with backend', () => {
     })
 
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: 'Questionnaire page' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Home page' })).not.toBeInTheDocument()
     })
     // Verify the frontend displays the backend username maximum-length error.
     expect(await screen.findByText(/username.*30|30.*username|characters or less/i)).toBeInTheDocument()
