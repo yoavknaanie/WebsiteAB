@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "db:init": "node scripts/initDb.js",
     "dev": "nodemon src/index.js",

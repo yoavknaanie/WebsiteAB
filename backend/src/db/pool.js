@@ -16,11 +16,27 @@
 const { Pool } = require('pg')
 
 if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is required. Add it to backend/.env before starting the server.')
+  throw new Error('DATABASE_URL is required.')
 }
 
+const databaseUrl = process.env.DATABASE_URL
+const hasSslMode = databaseUrl.includes('sslmode=require')
+const useSsl = process.env.DATABASE_SSL
+  ? process.env.DATABASE_SSL !== 'false'
+  : hasSslMode
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  // Full PostgreSQL connection URL, including user, password, host, port, and database name.
+  connectionString: databaseUrl,
+  // Enables encrypted database connections. DATABASE_SSL=true forces SSL, DATABASE_SSL=false disables it,
+  // and hosted URLs with sslmode=require enable it automatically.
+  ssl: useSsl ? { rejectUnauthorized: false } : false,
+  // Maximum open database connections per backend instance. Keep this low for Cloud Run/serverless.
+  max: Number(process.env.DATABASE_POOL_MAX || 5),
+  // Close unused connections after 30 seconds so the app does not waste database connection slots.
+  idleTimeoutMillis: 30_000,
+  // Fail connection attempts after 10 seconds instead of hanging while the database is unavailable.
+  connectionTimeoutMillis: 10_000,
 })
 
 module.exports = pool

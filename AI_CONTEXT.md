@@ -43,6 +43,7 @@ Backend:
 - dotenv for environment variables
 - nodemon for local backend development
 - drizzle packages are installed, but current DB code uses raw `pg` queries and a SQL migration file.
+- `backend/package.json` declares `"engines": { "node": "22.x" }` so deployment buildpacks use a predictable Node runtime.
 
 ## Repository Structure
 
@@ -82,13 +83,13 @@ Frontend:
 
 Backend:
 
-- `backend/src/index.js` - Express entrypoint. Loads dotenv, enables CORS and JSON parsing, mounts `/auth` and `/submissions`, responds on `/`, and starts the server.
+- `backend/src/index.js` - Express entrypoint. Loads dotenv, enables env-configurable CORS and JSON parsing, mounts `/auth` and `/submissions`, responds on `/`, and starts the server. `CORS_ORIGIN` can be set in production to restrict API calls to the deployed frontend origin; if unset, local/dev behavior remains open.
 - `backend/src/routes/authRoutes.js` - maps `POST /auth/signup` and `POST /auth/login` to the auth controller.
 - `backend/src/controllers/AuthController.js` - validates signup/login, normalizes username/email, hashes passwords, stores/loads users from PostgreSQL, and returns JWTs. Uses private class helper methods and `AUTH_MESSAGES` constants.
 - `backend/src/middleware/authMiddleware.js` - JWT middleware for protected routes. Expects `Authorization: Bearer <token>`, verifies with `JWT_SECRET`, attaches `req.userId`, and returns `401` for missing/invalid/expired tokens.
 - `backend/src/routes/submissionRoutes.js` - Express router for submissions. Supports public `GET /` for listing submissions, protected `POST /` for creating a submission, and protected `DELETE /:id` for deleting one of the logged-in user's submissions. Future `GET /mine` route is still commented/TODO.
 - `backend/src/controllers/SubmissionController.js` - submissions controller with `create`, `delete`, and `list` implemented using private helper methods and parameterized PostgreSQL queries. `create` uses `req.userId` from JWT middleware plus request body fields matching the submissions table, except database-owned fields such as `id`, `user_id`, and `created_at`. `delete` deletes by submission `id` and `req.userId`, so users cannot delete another user's submission. `list` returns newest submissions first with `limit`/`offset` pagination metadata.
-- `backend/src/db/pool.js` - shared PostgreSQL pool. Requires `DATABASE_URL`.
+- `backend/src/db/pool.js` - shared PostgreSQL pool. Requires `DATABASE_URL`. Supports hosted/serverless Postgres deployment by enabling SSL automatically when `DATABASE_URL` includes `sslmode=require`, or explicitly through `DATABASE_SSL=true`; local dev can disable SSL with `DATABASE_SSL=false`. Uses `DATABASE_POOL_MAX` with a default of `5`, plus idle and connection timeouts to avoid wasting database connections on Cloud Run/serverless.
 - `backend/src/models/User.js` - legacy in-memory user shape. Current auth does not use this model.
 - `backend/migrations/001_create_users.sql` - creates `users` table with `id`, unique `username`, unique `email`, `password_hash`, and `created_at`.
 - `backend/migrations/002_create_submissions_board.sql` - creates `submissions` table and indexes for listing/filtering.
@@ -174,17 +175,33 @@ npm run test:submissions
 
 On this Windows setup, PowerShell may block `npm.ps1`; use `npm.cmd` instead, for example `npm.cmd test` and `npm.cmd run test:submissions`.
 
+After the Cloud Run/Neon deployment-prep changes, `cd backend && npm.cmd test` passed with 7/7 backend tests.
+
 ## Environment Variables
 
 Backend expects `backend/.env` with:
 
 ```env
 DATABASE_URL=postgres://postgres:password@localhost:5432/accountabuddy
+DATABASE_SSL=false
 JWT_SECRET=replace_with_long_random_secret
 PORT=3000
 ```
 
 `DATABASE_URL` is required by `backend/src/db/pool.js`. `JWT_SECRET` is required for signup/login token signing.
+`DATABASE_SSL=false` is recommended for local PostgreSQL if the local server does not support SSL.
+
+For Cloud Run with a hosted PostgreSQL provider such as Neon, use environment variables similar to:
+
+```env
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
+DATABASE_SSL=true
+DATABASE_POOL_MAX=5
+JWT_SECRET=replace_with_long_random_secret
+CORS_ORIGIN=https://your-deployed-frontend.example
+```
+
+Neon is the current recommended free hosted PostgreSQL option for this app because the backend already uses raw `pg` queries and can use Neon's pooled Postgres connection string directly. Prefer the pooled Neon connection string for Cloud Run/serverless deployments.
 
 Frontend expects `frontend/.env` locally with:
 
