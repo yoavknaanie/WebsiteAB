@@ -3,7 +3,7 @@
 AccountaBuddy is a full-stack web app for finding online study or work accountability partners.
 
 Users can create "looking for partner" submissions, browse other submissions, send connection requests, and manage simple chat-style conversations. 
-The project is also built as a junior full-stack portfolio app that demonstrates practical frontend/backend integration, authentication, database design, clean server-side validation, and an initial automated testing setup.
+The project is also built as a junior full-stack portfolio app that demonstrates practical frontend/backend integration, authentication, database design, clean server-side validation, automated testing, and end-to-end deployment.
 
 Authors: Noya Gideoni and Yoav Knaanie
 
@@ -20,7 +20,28 @@ Authors: Noya Gideoni and Yoav Knaanie
 - Parameterized SQL queries to avoid SQL injection.
 - React routing and state management with context.
 - Frontend component testing with Vitest and React Testing Library.
+- Backend integration testing with Node's test runner and a real PostgreSQL database.
+- Production-style environment configuration across local development and deployed services.
+- End-to-end deployment with Cloudflare Pages, Google Cloud Run, and Neon PostgreSQL.
 - Practical code organization using controllers, routes, database helpers, and reusable frontend components.
+
+## Deployed Architecture
+
+```text
+Cloudflare Pages frontend
+  -> Google Cloud Run Express API
+    -> Neon PostgreSQL database
+```
+
+Deployment responsibilities covered in this project:
+
+- Vite frontend build and deployment through Cloudflare Pages.
+- Express backend deployment to Google Cloud Run from source.
+- Hosted PostgreSQL setup with Neon.
+- SQL migrations for users and submissions tables.
+- Production environment variables for API URLs, JWT secrets, database URLs, CORS, SSL, and pool size.
+- CORS configuration between the deployed frontend origin and deployed backend API.
+- Cloud Run scale-to-zero configuration for cost-aware hosting.
 
 ## Features
 
@@ -94,6 +115,8 @@ Backend:
 - jsonwebtoken
 - dotenv
 - nodemon
+- Google Cloud Run
+- Neon PostgreSQL
 
 ## Project Structure
 
@@ -298,6 +321,7 @@ Create `backend/.env`:
 
 ```env
 DATABASE_URL=postgres://postgres:password@localhost:5432/accountabuddy
+DATABASE_SSL=false
 JWT_SECRET=replace_with_a_long_random_secret
 PORT=3000
 ```
@@ -366,6 +390,38 @@ npm.cmd run test -- --run
 npm.cmd run test:integration
 ```
 
+## Deployment Summary
+
+The deployed app uses:
+
+- Cloudflare Pages for the frontend.
+- Google Cloud Run for the backend API.
+- Neon PostgreSQL for the hosted database.
+
+Backend deployment uses Cloud Run source deployment from the `backend` folder:
+
+```powershell
+gcloud run deploy accountabuddy-backend --source . --region europe-west1 --allow-unauthenticated --min-instances 0 --max-instances 2 --env-vars-file cloudrun.env
+```
+
+Production backend environment variables include:
+
+```env
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
+DATABASE_SSL=true
+DATABASE_POOL_MAX=5
+JWT_SECRET=replace_with_a_long_random_secret
+CORS_ORIGIN=https://your-frontend-domain
+```
+
+Production frontend builds with:
+
+```env
+VITE_API_URL=https://your-cloud-run-backend-url
+```
+
+See `deployment.txt` for the step-by-step deployment and redeployment notes.
+
 ## Security Notes
 
 - Plain-text passwords are never stored.
@@ -374,6 +430,7 @@ npm.cmd run test:integration
 - Signup/login validation happens on the server, not only in the frontend.
 - JWTs contain the database user id, not the password or password hash.
 - `.env` files should not be committed.
+- Deployment env files such as `cloudrun.env` should not be committed.
 - The frontend currently stores the JWT and username in `sessionStorage`, so a normal tab/session close clears the logged-in frontend state.
 - Logout is frontend-local: it clears `sessionStorage` auth values and removes old `localStorage` auth leftovers from earlier app versions.
 - A production app should consider stronger session handling such as HTTP-only cookies.

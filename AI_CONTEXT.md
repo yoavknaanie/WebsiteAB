@@ -22,6 +22,7 @@ The current implementation is partly backend-backed and partly local-only:
 - The frontend stores auth token and username in `sessionStorage`, so a normal tab/session close returns the user to a logged-out state.
 - Requests, conversations, viewer identity, and chat messages currently live in browser `localStorage` through React context.
 - Questionnaire submission creation and public submissions board loading are wired to the Express backend.
+- The app has been deployed end to end with Cloudflare Pages for the frontend, Google Cloud Run for the backend, and Neon PostgreSQL for the hosted database.
 
 ## Tech Stack
 
@@ -32,6 +33,7 @@ Frontend:
 - React Router DOM 7
 - React Hot Toast
 - Firebase was removed from the frontend because the current app does not use it.
+- Production frontend deployment uses Cloudflare Pages. The production `VITE_API_URL` is configured in Cloudflare Pages environment variables and must point to the Cloud Run backend URL.
 
 Backend:
 
@@ -44,6 +46,8 @@ Backend:
 - nodemon for local backend development
 - drizzle packages are installed, but current DB code uses raw `pg` queries and a SQL migration file.
 - `backend/package.json` declares `"engines": { "node": "22.x" }` so deployment buildpacks use a predictable Node runtime.
+- Production backend deployment uses Google Cloud Run with source-based deployment and Artifact Registry for the built container image.
+- Production database deployment uses Neon PostgreSQL. Migrations were run against Neon with `npm.cmd run db:init`.
 
 ## Repository Structure
 
@@ -202,6 +206,7 @@ CORS_ORIGIN=https://your-deployed-frontend.example
 ```
 
 Neon is the current recommended free hosted PostgreSQL option for this app because the backend already uses raw `pg` queries and can use Neon's pooled Postgres connection string directly. Prefer the pooled Neon connection string for Cloud Run/serverless deployments.
+In production, Cloud Run `CORS_ORIGIN` must exactly match the deployed Cloudflare frontend origin, with no trailing slash. The deployed frontend initially failed to call signup until the exact Cloudflare Pages frontend URL was set in Cloud Run.
 
 Frontend expects `frontend/.env` locally with:
 
