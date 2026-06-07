@@ -1,11 +1,12 @@
 # AccountaBuddy
+Website Link: https://websiteab-bpd.pages.dev/
 
 AccountaBuddy is a full-stack web app for finding online study or work accountability partners.
 
 Users can create "looking for partner" submissions, browse other submissions, send connection requests, and manage simple chat-style conversations. 
 The project is also built as a junior full-stack portfolio app that demonstrates practical frontend/backend integration, authentication, database design, clean server-side validation, automated testing, and end-to-end deployment.
 
-Authors: Noya Gideoni and Yoav Knaanie
+Authors: Yoav Knaanie and Noya Gideoni
 
 ## What This Project Demonstrates
 
