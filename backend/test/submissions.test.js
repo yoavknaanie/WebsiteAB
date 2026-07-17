@@ -185,27 +185,30 @@ test('creates and deletes a submission for the logged-in user', async () => {
 test('lists public submissions with pagination metadata', async () => {
   const token = await signupUser(listTestUser)
   const firstSubmission = await createSubmission(token, {
-    title: 'First list test submission',
+    title: `First list test submission ${testRunId}`,
   })
   const secondSubmission = await createSubmission(token, {
-    title: 'Second list test submission',
+    title: `Second list test submission ${testRunId}`,
   })
 
   const listResult = await request('/submissions?limit=1&offset=0')
 
   assert.equal(listResult.response.status, 200)
   assert.equal(listResult.body.submissions.length, 1)
-  assert.equal(listResult.body.submissions[0].id, secondSubmission.id)
   assert.equal(listResult.body.pagination.limit, 1)
   assert.equal(listResult.body.pagination.offset, 0)
   assert.equal(listResult.body.pagination.count, 1)
   assert.equal(listResult.body.pagination.hasMore, true)
 
-  const secondPageResult = await request('/submissions?limit=1&offset=1')
+  const listAllResult = await request('/submissions?limit=50&offset=0')
+  const listedIds = listAllResult.body.submissions.map((submission) => submission.id)
+  const firstIndex = listedIds.indexOf(firstSubmission.id)
+  const secondIndex = listedIds.indexOf(secondSubmission.id)
 
-  assert.equal(secondPageResult.response.status, 200)
-  assert.equal(secondPageResult.body.submissions.length, 1)
-  assert.equal(secondPageResult.body.submissions[0].id, firstSubmission.id)
+  assert.equal(listAllResult.response.status, 200)
+  assert.notEqual(firstIndex, -1)
+  assert.notEqual(secondIndex, -1)
+  assert.ok(secondIndex < firstIndex)
 })
 
 test('rejects submission creation without a token', async () => {

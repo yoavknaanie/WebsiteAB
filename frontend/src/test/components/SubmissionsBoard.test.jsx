@@ -1,5 +1,6 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import SubmissionsBoard from '../../components/SubmissionsBoard'
 import SubmissionsContext from '../../contexts/SubmissionsContext'
@@ -14,7 +15,9 @@ const renderSubmissionsBoard = ({ requests = [] } = {}) => {
         viewerId: 'viewer-1',
       }}
     >
-      <SubmissionsBoard />
+      <MemoryRouter>
+        <SubmissionsBoard />
+      </MemoryRouter>
     </SubmissionsContext.Provider>,
   )
 }
@@ -43,6 +46,7 @@ const mockSubmissionsResponse = (submissions) => {
 const backendSubmission = (overrides = {}) => ({
   id: '1',
   user_id: '10',
+  publisher_username: 'studyPublisher',
   title: 'Accounting study partner',
   age: 25,
   gender: 'Non-binary',
@@ -76,6 +80,7 @@ describe('SubmissionsBoard', () => {
 
     expect(await screen.findByText('Accounting study partner')).toBeInTheDocument()
     expect(fetch).toHaveBeenCalledWith('http://localhost:3000/submissions')
+    expect(screen.getByText('Posted by: studyPublisher')).toBeInTheDocument()
     expect(screen.getByText('Looking for focused accounting sessions.')).toBeInTheDocument()
     expect(screen.getByText('Age: 25')).toBeInTheDocument()
     expect(screen.getByText('Gender: Non-binary')).toBeInTheDocument()

@@ -17,6 +17,7 @@ const express = require('express')
 const cors = require('cors')
 const authRoutes = require('./routes/authRoutes')
 const submissionRoutes = require('./routes/submissionRoutes')
+const chatRoutes = require('./routes/chatRoutes')
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -36,6 +37,7 @@ app.use('/auth', authRoutes)
 // - GET /submissions
 // - GET /submissions/mine
 app.use('/submissions', submissionRoutes)
+app.use('/chats', chatRoutes)
 
 app.get('/', (req, res) => {
   res.json({ message: 'Backend is running' })

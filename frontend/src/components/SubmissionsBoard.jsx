@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 import { useSubmissions } from '../contexts/SubmissionsContext'
 
 const availabilityOptions = ['Multiple daily', 'Once daily', 'Every couple of days', 'Weekly', 'Other']
@@ -18,7 +19,7 @@ function Composer({ onSend, onCancel, initialMessage = '' }) {
       />
       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
         <button type="button" className="btn" onClick={() => onSend(message)}>Send</button>
-        <button type="button" className="btn" onClick={() => onSend('')}>Skip</button>
+        <button type="button" className="btn" onClick={onCancel}>Cancel</button>
       </div>
     </div>
   )
@@ -26,6 +27,7 @@ function Composer({ onSend, onCancel, initialMessage = '' }) {
 
 function SubmissionsBoard() {
   const { requests, addRequest, cancelRequest, viewerId } = useSubmissions()
+  const navigate = useNavigate()
   const [submissions, setSubmissions] = useState([])
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(true)
   const [submissionsError, setSubmissionsError] = useState('')
@@ -39,6 +41,7 @@ function SubmissionsBoard() {
   // requests are now stored in context
   const [openComposerId, setOpenComposerId] = useState(null)
   const [openCancelId, setOpenCancelId] = useState(null)
+  const [sendingChatId, setSendingChatId] = useState(null)
 
   const listRef = useRef(null)
 
@@ -61,6 +64,7 @@ function SubmissionsBoard() {
           ...submission,
           createdAt: submission.created_at,
           ownerId: submission.user_id,
+          publisherUsername: submission.publisher_username,
           lookingFor: [
             submission.looking_for1,
             submission.looking_for2,
@@ -187,11 +191,65 @@ function SubmissionsBoard() {
     setBestId(null)
   }
 
-  const requestConnection = (id, message = '') => {
-    // delegate to context
-    addRequest(id, message)
-    setOpenComposerId(null)
-    toast.success('Connection request sent' + (message ? ' with your message.' : '.'))
+  const getLoggedInUserId = () => {
+    const token = sessionStorage.getItem('token')
+    if (!token) return null
+
+    try {
+      const payload = token.split('.')[1]
+      const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+      const paddedPayload = normalizedPayload.padEnd(normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4), '=')
+      const decodedPayload = JSON.parse(window.atob(paddedPayload))
+      return decodedPayload.userId
+    } catch {
+      return null
+    }
+  }
+
+  const requestConnection = async (id, message = '') => {
+    const token = sessionStorage.getItem('token')
+    const trimmedMessage = message.trim()
+
+    if (!token) {
+      toast.error('Please log in before reaching out.')
+      navigate('/login')
+      return
+    }
+
+    if (!trimmedMessage) {
+      toast.error('Please write a first message.')
+      return
+    }
+
+    setSendingChatId(id)
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chats`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          submissionId: id,
+          message: trimmedMessage,
+        }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Could not start chat.')
+      }
+
+      addRequest(id, trimmedMessage)
+      setOpenComposerId(null)
+      toast.success('Chat started.')
+      navigate(`/chats?chatId=${data.chat.id}`)
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setSendingChatId(null)
+    }
   }
 
   const openComposer = (id) => {
@@ -264,6 +322,8 @@ function SubmissionsBoard() {
               const isBest = bestId === s.id
               const mySentRequest = requests.find((r) => r.submissionId === s.id && r.fromId === viewerId && r.status === 'pending')
               const requested = !!mySentRequest
+              const loggedInUserId = getLoggedInUserId()
+              const isOwnSubmission = loggedInUserId && Number(s.ownerId) === Number(loggedInUserId)
               return (
                 <article
                   id={`submission-${s.id}`}
@@ -280,6 +340,9 @@ function SubmissionsBoard() {
                     <strong>{s.title}</strong>
                     <small style={{ color: '#666' }}>{new Date(s.createdAt).toLocaleString()}</small>
                   </div>
+                  <div style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                    Posted by: {s.publisherUsername || 'Unknown user'}
+                  </div>
                   <p style={{ margin: '0.5rem 0' }}>{s.description}</p>
                   <div style={{ fontSize: '0.95rem', color: '#333' }}>
                     <div>Age: {s.age}</div>
@@ -290,7 +353,11 @@ function SubmissionsBoard() {
                     <div>Timezone: {s.timezone}</div>
                   </div>
                   <div style={{ position: 'absolute', right: '12px', bottom: '12px' }}>
-                    {openComposerId === s.id ? (
+                    {isOwnSubmission ? (
+                      <button type="button" className="btn" disabled>
+                        Your Submission
+                      </button>
+                    ) : openComposerId === s.id ? (
                       <Composer
                         onSend={(msg) => requestConnection(s.id, msg)}
                         onCancel={() => setOpenComposerId(null)}
@@ -321,6 +388,7 @@ function SubmissionsBoard() {
                       <button
                         type="button"
                         className="btn"
+                        disabled={sendingChatId === s.id}
                         onClick={() => {
                           if (requested) {
                             // open cancel confirmation
@@ -331,7 +399,7 @@ function SubmissionsBoard() {
                           }
                         }}
                       >
-                        {requested ? 'Request Sent' : 'Reach Out'}
+                        {sendingChatId === s.id ? 'Sending...' : requested ? 'Request Sent' : 'Reach Out'}
                       </button>
                     )}
                   </div>

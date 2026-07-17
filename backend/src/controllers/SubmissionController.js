@@ -294,25 +294,27 @@ class SubmissionController {
     const result = await pool.query(
       `
         SELECT
-          id,
-          user_id,
-          title,
-          age,
-          gender,
-          timezone,
-          description,
-          goals,
-          looking_for1,
-          looking_for2,
-          looking_for3,
-          looking_for4,
-          looking_for5,
-          availability,
-          communication,
-          constraints,
-          created_at
+          submissions.id,
+          submissions.user_id,
+          users.username AS publisher_username,
+          submissions.title,
+          submissions.age,
+          submissions.gender,
+          submissions.timezone,
+          submissions.description,
+          submissions.goals,
+          submissions.looking_for1,
+          submissions.looking_for2,
+          submissions.looking_for3,
+          submissions.looking_for4,
+          submissions.looking_for5,
+          submissions.availability,
+          submissions.communication,
+          submissions.constraints,
+          submissions.created_at
         FROM submissions
-        ORDER BY created_at DESC, id DESC
+        JOIN users ON users.id = submissions.user_id
+        ORDER BY submissions.created_at DESC, submissions.id DESC
         LIMIT $1 OFFSET $2
       `,
       [options.limit + 1, options.offset],

@@ -61,7 +61,7 @@ describe('Landing and home navigation', () => {
     expect(screen.getByRole('heading', { name: 'Login page' })).toBeInTheDocument()
   })
 
-  test('home page shows app navigation without chats for now', () => {
+  test('home page shows app navigation', () => {
     render(
       <MemoryRouter>
         <Home />
@@ -71,7 +71,7 @@ describe('Landing and home navigation', () => {
     expect(screen.getByRole('button', { name: 'Questionnaire' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Submissions' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'My Board' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Chats' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Chats' })).toBeInTheDocument()
   })
 
   test('home questionnaire button navigates to questionnaire', async () => {
@@ -123,5 +123,22 @@ describe('Landing and home navigation', () => {
     await user.click(screen.getByRole('button', { name: 'My Board' }))
 
     expect(screen.getByRole('heading', { name: 'My Board page' })).toBeInTheDocument()
+  })
+
+  test('home chats button navigates to chats', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/home']}>
+        <Routes>
+          <Route path="/home" element={<Home />} />
+          <Route path="/chats" element={<h1>Chats page</h1>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Chats' }))
+
+    expect(screen.getByRole('heading', { name: 'Chats page' })).toBeInTheDocument()
   })
 })
