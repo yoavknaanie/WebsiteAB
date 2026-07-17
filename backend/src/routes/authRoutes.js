@@ -7,12 +7,13 @@
  * POST /auth/signup → AuthController.signup
  * POST /auth/login  → AuthController.login
  */
-
 const express = require('express')
-const router = express.Router()
 const authController = require('../controllers/AuthController')
+const { authRateLimiter } = require('../middleware/rateLimitMiddleware')
 
-router.post('/signup', (req, res) => authController.signup(req, res))
-router.post('/login', (req, res) => authController.login(req, res))
+const router = express.Router()
+
+router.post('/signup', authRateLimiter, (req, res) => authController.signup(req, res))
+router.post('/login', authRateLimiter, (req, res) => authController.login(req, res))
 
 module.exports = router

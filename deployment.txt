@@ -1,0 +1,139 @@
+AccountaBuddy Deployment Guide
+
+Current production architecture:
+
+Cloudflare Pages frontend
+  -> Google Cloud Run backend
+    -> Neon PostgreSQL database
+
+1. Hosted database setup with Neon
+
+- Create a Neon PostgreSQL project.
+- Copy the pooled connection string when possible.
+- The connection string should include sslmode=require.
+- Put the Neon URL in backend/.env locally when running migrations.
+
+Example backend/.env for local migration against Neon:
+
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
+DATABASE_SSL=true
+JWT_SECRET=replace_with_a_long_random_secret
+PORT=3000
+
+Run migrations:
+
+cd C:\Yoav\projects\AccountaBuddy\WebsiteAB\backend
+npm.cmd run db:init
+
+2. Google Cloud setup
+
+- Create or select the Google Cloud project.
+- Link billing and set a budget alert.
+- Install and initialize Google Cloud CLI.
+- Enable required services:
+
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+
+3. Backend Cloud Run environment file
+
+Create backend/cloudrun.env locally. Do not commit it.
+
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
+DATABASE_SSL=true
+DATABASE_POOL_MAX=5
+JWT_SECRET=replace_with_a_long_random_secret
+CORS_ORIGIN=https://your-cloudflare-frontend-domain
+
+Important:
+
+- Do not include PORT. Cloud Run sets PORT automatically.
+- CORS_ORIGIN must exactly match the frontend origin.
+- Do not include a trailing slash in CORS_ORIGIN.
+- Example: https://websiteab.pages.dev
+
+4. Initial backend deployment
+
+Run from the backend folder:
+
+cd C:\Yoav\projects\AccountaBuddy\WebsiteAB\backend
+gcloud run deploy accountabuddy-backend --source . --region europe-west1 --allow-unauthenticated --min-instances 0 --max-instances 2 --env-vars-file cloudrun.env
+
+This command:
+
+- Uploads the backend source.
+- Builds a container image with Cloud Build.
+- Stores the image in Artifact Registry.
+- Runs the backend as a Cloud Run service.
+- Applies the production environment variables.
+
+Test the deployed backend:
+
+curl.exe https://your-cloud-run-backend-url/
+
+Expected response:
+
+{"message":"Backend is running"}
+
+5. Cloudflare Pages frontend configuration
+
+In Cloudflare Pages:
+
+- Open the frontend Pages project.
+- Go to Settings.
+- Open Variables and Secrets.
+- Add or update the Production variable:
+
+VITE_API_URL=https://your-cloud-run-backend-url
+
+Redeploy the frontend after changing VITE_API_URL because Vite reads this value at build time.
+
+6. Redeploy backend after code changes
+
+Use this when backend code changed:
+
+cd C:\Yoav\projects\AccountaBuddy\WebsiteAB\backend
+gcloud run deploy accountabuddy-backend --source . --region europe-west1 --allow-unauthenticated --min-instances 0 --max-instances 2 --env-vars-file cloudrun.env
+
+Use this when only Cloud Run environment variables changed:
+
+gcloud run services update accountabuddy-backend --region europe-west1 --update-env-vars CORS_ORIGIN=https://your-cloudflare-frontend-domain
+
+For multiple env vars:
+
+gcloud run services update accountabuddy-backend --region europe-west1 --update-env-vars DATABASE_POOL_MAX=5,CORS_ORIGIN=https://your-cloudflare-frontend-domain
+
+7. Redeploy frontend after code changes
+
+If Cloudflare Pages is connected to GitHub:
+
+cd C:\Yoav\projects\AccountaBuddy\WebsiteAB
+git status
+git add .
+git commit -m "Describe the change"
+git push
+
+Cloudflare will automatically build and deploy the frontend from the configured production branch.
+
+8. Local development
+
+Local frontend:
+
+frontend/.env
+VITE_API_URL=http://localhost:3000
+
+Local backend:
+
+backend/.env
+DATABASE_URL=postgres://postgres:password@localhost:5432/accountabuddy
+DATABASE_SSL=false
+JWT_SECRET=replace_with_a_long_random_secret
+PORT=3000
+
+9. Safety notes
+
+- Do not commit backend/.env.
+- Do not commit backend/cloudrun.env.
+- Do not paste real database URLs or JWT secrets into public places.
+- If a Neon database URL is exposed, reset the database role password and use the new URL.
+- Keep Cloud Run min instances at 0 for low-cost scale-to-zero behavior.
+- Keep Cloud Run max instances low for a small portfolio app.
