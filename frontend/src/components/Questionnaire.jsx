@@ -7,6 +7,9 @@ import React, { useState, useEffect } from 'react'
 // ======================= CONSTANTS =======================
 const API_URL = import.meta.env.VITE_API_URL
 const SUBMISSION_ROUTE = `${API_URL}/submissions`
+const TITLE_MAX_LENGTH = 30
+const TEXT_FIELD_MAX_LENGTH = 350
+const OTHER_GENDER_MAX_LENGTH = 30
 const availabilityOptions = ['Multiple daily', 'Once daily', 'Every couple of days', 'Weekly', 'Other']
 
 const communicationOptions = [
@@ -225,7 +228,7 @@ function Questionnaire() {
             {formData.gender === 'Other' && (
               <div style={{ marginTop: 8 }}>
                 <input id="otherGender" type="text" name="otherGender" placeholder="Please specify" 
-                  value={formData.otherGender} onChange={handleChange} required className="form-input"
+                  value={formData.otherGender} onChange={handleChange} required maxLength={OTHER_GENDER_MAX_LENGTH} className="form-input"
                 />
               </div>
             )}
@@ -258,7 +261,7 @@ function Questionnaire() {
         <div className="form-field">
           <label htmlFor="title">Title<span className="req">*</span></label>
           <input type="text" id="title" name="title" placeholder={titlePlaceholder} 
-            value={formData.title} onChange={handleChange} required className="form-input"
+            value={formData.title} onChange={handleChange} required maxLength={TITLE_MAX_LENGTH} className="form-input"
           />
         </div>
 
@@ -266,7 +269,7 @@ function Questionnaire() {
         <div className="form-field">
           <label htmlFor="description">Description</label>
           <textarea id="description" name="description" value={formData.description}
-            onChange={handleChange} className="form-textarea"
+            onChange={handleChange} maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea"
           />
         </div>
 
@@ -274,7 +277,7 @@ function Questionnaire() {
         <div className="form-field">
           <label htmlFor="goals">Goals</label>
           <textarea id="goals" name="goals" value={formData.goals} onChange={handleChange}
-            className="form-textarea"
+            maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea"
           />
         </div>
 
@@ -283,7 +286,7 @@ function Questionnaire() {
           <label>Looking for in a Buddy (up to 5):</label>
           {formData.lookingFor.map((item, i) => (
             <input key={i} type="text" placeholder={`#${i + 1}`} value={item}
-              onChange={(e) => handleLookingForChange(i, e.target.value)} className="form-input"
+              onChange={(e) => handleLookingForChange(i, e.target.value)} maxLength={TEXT_FIELD_MAX_LENGTH} className="form-input"
             />
           ))}
         </div>
@@ -303,7 +306,7 @@ function Questionnaire() {
           {formData.availability === 'Other' && (
             <textarea name="otherAvailability" value={formData.otherAvailability}
               onChange={handleChange} placeholder="Please describe your availability"
-              className="form-textarea" style={{ minHeight: '70px' }}
+              maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea" style={{ minHeight: '70px' }}
             />
           )}
         </div>
@@ -332,7 +335,7 @@ function Questionnaire() {
               <label htmlFor="communicationOther">Please specify <span className="req">*</span></label>
               <input id="communicationOther" type="text" name="communicationOther" value={formData.communicationOther}
                 onChange={handleChange} placeholder="Please specify other communication methods"
-                required className="form-input"
+                required maxLength={TEXT_FIELD_MAX_LENGTH} className="form-input"
               />
             </div>
           )}
@@ -371,7 +374,7 @@ function Questionnaire() {
           {hasConstraints && (
             <textarea id="constraints" name="constraints" value={formData.constraints} 
               onChange={handleChange} placeholder="Please write here your constraints" 
-              className="form-textarea"
+              maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea"
             />
           )}
         </div>

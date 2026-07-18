@@ -5,6 +5,13 @@ import { useSubmissions } from '../contexts/SubmissionsContext'
 
 const availabilityOptions = ['Multiple daily', 'Once daily', 'Every couple of days', 'Weekly', 'Other']
 const communicationOptions = ['Chat', 'Voice Call', 'Video Call', 'Async Check-ins', 'Other']
+const TITLE_MAX_LENGTH = 30
+const DESCRIPTION_MAX_LENGTH = 350
+
+function truncateText(text, maxLength = DESCRIPTION_MAX_LENGTH) {
+  if (!text || text.length <= maxLength) return text
+  return `${text.slice(0, maxLength).trim()}...`
+}
 
 // Small inline composer used when reaching out with a message
 function Composer({ onSend, onCancel, initialMessage = '' }) {
@@ -337,18 +344,22 @@ function SubmissionsBoard() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <strong>{s.title}</strong>
+                    <strong style={{ overflowWrap: 'anywhere' }}>{truncateText(s.title, TITLE_MAX_LENGTH)}</strong>
                     <small style={{ color: '#666' }}>{new Date(s.createdAt).toLocaleString()}</small>
                   </div>
                   <div style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.25rem' }}>
                     Posted by: {s.publisherUsername || 'Unknown user'}
                   </div>
-                  <p style={{ margin: '0.5rem 0' }}>{s.description}</p>
-                  <div style={{ fontSize: '0.95rem', color: '#333' }}>
+                  <p style={{ margin: '0.5rem 0', overflowWrap: 'anywhere' }}>{truncateText(s.description)}</p>
+                  <div style={{ fontSize: '0.95rem', color: '#333', overflowWrap: 'anywhere' }}>
+                    {s.goals && <div>Goals: {s.goals}</div>}
                     <div>Age: {s.age}</div>
                     <div>Gender: {s.gender === 'Other' ? s.otherGender : s.gender}</div>
                     <div>Availability: {s.availability === 'Other' ? s.otherAvailability : s.availability}</div>
                     <div>Communication: {Array.isArray(s.communication) ? s.communication.join(', ') : s.communication}</div>
+                    {s.constraints && (
+                      <div>Availability and Communication Constraints: {s.constraints}</div>
+                    )}
                     <div>Looking for: {Array.isArray(s.lookingFor) ? s.lookingFor.filter(Boolean).join(', ') : s.lookingFor}</div>
                     <div>Timezone: {s.timezone}</div>
                   </div>

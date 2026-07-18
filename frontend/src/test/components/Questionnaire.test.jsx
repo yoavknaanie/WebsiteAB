@@ -114,4 +114,31 @@ describe('Questionnaire submission', () => {
 
     expect(await screen.findByRole('button', { name: 'Submit' })).toBeEnabled()
   })
+
+  test('sets character limits on questionnaire text fields', async () => {
+    const user = userEvent.setup()
+
+    render(<Questionnaire />)
+
+    expect(screen.getByLabelText(/title/i)).toHaveAttribute('maxlength', '30')
+    expect(screen.getByLabelText(/description/i)).toHaveAttribute('maxlength', '350')
+    expect(screen.getByLabelText(/goals/i)).toHaveAttribute('maxlength', '350')
+
+    const lookingForInputs = screen.getAllByPlaceholderText(/^#\d$/)
+    for (const input of lookingForInputs) {
+      expect(input).toHaveAttribute('maxlength', '350')
+    }
+
+    await user.selectOptions(screen.getByLabelText(/gender/i), 'Other')
+    expect(document.querySelector('#otherGender')).toHaveAttribute('maxlength', '30')
+
+    await user.selectOptions(screen.getByRole('combobox', { name: /availability/i }), 'Other')
+    expect(screen.getByPlaceholderText(/please describe your availability/i)).toHaveAttribute('maxlength', '350')
+
+    await user.click(screen.getByLabelText('Other'))
+    expect(document.querySelector('#communicationOther')).toHaveAttribute('maxlength', '350')
+
+    await user.click(screen.getByRole('checkbox', { name: /Availability and Communication Constraints/i }))
+    expect(screen.getByPlaceholderText(/please write here your constraints/i)).toHaveAttribute('maxlength', '350')
+  })
 })

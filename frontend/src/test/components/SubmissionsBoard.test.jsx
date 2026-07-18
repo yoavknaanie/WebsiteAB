@@ -60,7 +60,7 @@ const backendSubmission = (overrides = {}) => ({
   looking_for5: null,
   availability: 'Weeknights',
   communication: 'Chat, Discord',
-  constraints: null,
+  constraints: 'Weeknights only.',
   created_at: '2026-05-21T00:00:00.000Z',
   ...overrides,
 })
@@ -84,10 +84,57 @@ describe('SubmissionsBoard', () => {
     expect(screen.getByText('Looking for focused accounting sessions.')).toBeInTheDocument()
     expect(screen.getByText('Age: 25')).toBeInTheDocument()
     expect(screen.getByText('Gender: Non-binary')).toBeInTheDocument()
+    expect(screen.getByText('Goals: Finish accounting coursework.')).toBeInTheDocument()
     expect(screen.getByText('Availability: Weeknights')).toBeInTheDocument()
     expect(screen.getByText('Communication: Chat, Discord')).toBeInTheDocument()
+    expect(screen.getByText('Availability and Communication Constraints: Weeknights only.')).toBeInTheDocument()
     expect(screen.getByText('Looking for: Accountability, Friendly')).toBeInTheDocument()
     expect(screen.getByText('Timezone: UTC +10')).toBeInTheDocument()
+  })
+
+  test('hides optional goals and constraints when they are empty', async () => {
+    mockSubmissionsResponse([
+      backendSubmission({
+        goals: null,
+        constraints: null,
+      }),
+    ])
+
+    renderSubmissionsBoard()
+
+    expect(await screen.findByText('Accounting study partner')).toBeInTheDocument()
+    expect(screen.queryByText(/^Goals:/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Availability and Communication Constraints:/)).not.toBeInTheDocument()
+  })
+
+  test('truncates long descriptions on submission cards', async () => {
+    const longDescription = 'a'.repeat(360)
+
+    mockSubmissionsResponse([
+      backendSubmission({
+        description: longDescription,
+      }),
+    ])
+
+    renderSubmissionsBoard()
+
+    expect(await screen.findByText(`${'a'.repeat(350)}...`)).toBeInTheDocument()
+    expect(screen.queryByText(longDescription)).not.toBeInTheDocument()
+  })
+
+  test('truncates long submission titles on submission cards', async () => {
+    const longTitle = 't'.repeat(100)
+
+    mockSubmissionsResponse([
+      backendSubmission({
+        title: longTitle,
+      }),
+    ])
+
+    renderSubmissionsBoard()
+
+    expect(await screen.findByText(`${'t'.repeat(30)}...`)).toBeInTheDocument()
+    expect(screen.queryByText(longTitle)).not.toBeInTheDocument()
   })
 
   test('shows backend load errors', async () => {
