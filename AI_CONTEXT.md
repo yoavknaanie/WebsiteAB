@@ -20,8 +20,9 @@ The current implementation is partly backend-backed and partly local-only:
 - Auth is implemented against Express + PostgreSQL, including username, email, password hashing, and JWT creation.
 - Backend submissions support creating, deleting, and listing submission tickets through Express + PostgreSQL.
 - The frontend stores auth token and username in `sessionStorage`, so a normal tab/session close returns the user to a logged-out state.
-- Requests, conversations, viewer identity, and chat messages currently live in browser `localStorage` through React context.
-- Questionnaire submission creation and public submissions board loading are wired to the Express backend.
+- Questionnaire submission creation, public submissions board loading, and chats/messages are wired to the Express backend.
+- Requests, My Board request workflows, and anonymous viewer identity still have local-only leftovers in browser `localStorage` through React context.
+- Stage 1 chat behavior is backend-persisted over normal HTTPS requests with 5-second frontend polling, not WebSockets.
 - The app has been deployed end to end with Cloudflare Pages for the frontend, Google Cloud Run for the backend, and Neon PostgreSQL for the hosted database.
 
 ## Tech Stack
@@ -62,24 +63,24 @@ Frontend:
 - `frontend/src/main.jsx` - React entrypoint. Wraps the app in `BrowserRouter`, `SubmissionsProvider`, and `Toaster`.
 - `frontend/src/App.jsx` - route table and top-level layout. Always renders `Navbar`.
 - `frontend/src/index.css` and `frontend/src/App.css` - global styling.
-- `frontend/src/contexts/SubmissionsContext.jsx` - localStorage-backed data layer for submissions, requests, conversations, messages, and anonymous viewer id.
+- `frontend/src/contexts/SubmissionsContext.jsx` - legacy/localStorage-backed data layer for local requests, local conversations, messages, and anonymous viewer id. Backend-backed submissions and chats now bypass most of this context.
 - `frontend/src/components/SignUp.jsx` - signup form with username text input, email input, password, and confirm password. Calls `${import.meta.env.VITE_API_URL}/auth/signup` with `{ username, email, password, confirmPassword }`, stores JWT in `sessionStorage.token`, stores the submitted username in `sessionStorage.username`, and navigates to `/home`.
 - `frontend/src/components/LogIn.jsx` - login form, calls `${import.meta.env.VITE_API_URL}/auth/login`, stores JWT in `sessionStorage.token`, stores returned username in `sessionStorage.username`, and navigates to `/home`.
-- `frontend/src/components/Questionnaire.jsx` - questionnaire form. It collects ticket/submission fields, submits them to backend `POST /submissions` with the JWT from `sessionStorage.token`, shows a loading button while the request is pending, and shows `Submission has been uploaded!` after success.
-- `frontend/src/components/SubmissionsBoard.jsx` - loads public submissions from backend `GET /submissions`, normalizes backend fields such as `created_at`, `user_id`, and `looking_for1` through `looking_for5` for the current UI, filters them in the browser, and can send/cancel local connection requests.
+- `frontend/src/components/Questionnaire.jsx` - questionnaire form. It collects ticket/submission fields, submits them to backend `POST /submissions` with the JWT from `sessionStorage.token`, shows a loading button while the request is pending, and shows `Submission has been uploaded!` after success. Frontend input limits include title max 30 characters; description, goals, looking-for items, other availability, other communication, and constraints max 350 characters; other gender max 30 characters.
+- `frontend/src/components/SubmissionsBoard.jsx` - loads public submissions from backend `GET /submissions`, normalizes backend fields such as `created_at`, `user_id`, `publisher_username`, and `looking_for1` through `looking_for5` for the current UI, filters them in the browser, displays publisher username, conditionally displays goals and availability/communication constraints, truncates displayed titles to 30 characters, truncates displayed descriptions to 350 characters, wraps long text inside cards, and starts backend chats from `Reach Out` with a required first message. It blocks reaching out to the logged-in user's own submission and navigates to `/chats?chatId=...` after chat creation.
 - `frontend/src/components/MyBoard.jsx` - shows current viewer submissions and sent requests; accepts/cancels requests and includes a chat box for accepted requests.
-- `frontend/src/components/Chats.jsx` - lists active conversations for the current viewer and allows sending local messages.
+- `frontend/src/components/Chats.jsx` - backend-backed chat page. Requires `sessionStorage.token`, lists chats from `GET /chats`, opens a chat from the URL query param `chatId`, loads messages from `GET /chats/:id/messages`, sends messages through `POST /chats/:id/messages`, and polls the active chat every 5 seconds using `POLLING_INTERVAL_MS = 5000`.
 - `frontend/src/components/Navbar.jsx` - top navigation. Reads `sessionStorage.username`; if present, shows the username in the top-right button. Clicking the username opens a `Log Out` button that clears `sessionStorage.token` and `sessionStorage.username`, removes old auth leftovers from `localStorage`, navigates to `/`, and returns the navbar to `Log In`. The top-left Accountabuddy logo sends logged-in users to `/home` and logged-out users to `/`.
 - `frontend/src/components/Hero.jsx` - public landing hero. Shows `Get Started` and `Log in` as green primary buttons, with `How it works` as a white outlined button on the next line.
 - `frontend/src/components/Landing.jsx` - public landing page that renders `Hero` and `HowItWorks`.
-- `frontend/src/components/Home.jsx` - logged-in home/dashboard page with navigation buttons for Questionnaire, Submissions, and My Board. The Chats button is currently commented out because chat is not fully implemented yet. Also renders `HowItWorks`.
+- `frontend/src/components/Home.jsx` - logged-in home/dashboard page with navigation buttons for Questionnaire, Submissions, and Chats. The My Board button was removed from the dashboard, though the `/myboard` route still exists. Also renders `HowItWorks`.
 - `frontend/src/components/HowItWorks.jsx`, `Footer.jsx` - supporting landing/home UI.
 - `frontend/src/test/setup.js` - Vitest setup file that imports `@testing-library/jest-dom/vitest`.
 - `frontend/.env.example` - committed frontend env template with `VITE_API_URL=http://localhost:3000`.
 - `frontend/src/test/components/Navbar.test.jsx` - React Testing Library tests for Navbar logged-out display, username dropdown, logout behavior, stale `localStorage` auth being ignored, logged-in logo navigation to `/home`, and logged-out account-button navigation to `/login`.
-- `frontend/src/test/components/LandingHome.test.jsx` - React Testing Library tests for public landing actions, hidden logged-in app actions on landing, Home navigation buttons, and Chats staying hidden while chat is not fully implemented.
-- `frontend/src/test/components/Questionnaire.test.jsx` - React Testing Library unit/component tests for mocked questionnaire submission behavior, including normalized `POST /submissions` payload, JWT authorization header, success message, and disabled loading submit button.
-- `frontend/src/test/components/SubmissionsBoard.test.jsx` - React Testing Library tests for mocked backend `GET /submissions` loading, backend field normalization, rendering, error display, and frontend filters for looking-for keywords and communication methods. Uses a mocked `SubmissionsContext.Provider` to isolate board behavior from local request/conversation storage.
+- `frontend/src/test/components/LandingHome.test.jsx` - React Testing Library tests for public landing actions, hidden logged-in app actions on landing, Home navigation buttons, Chats dashboard navigation, and My Board staying hidden from Home.
+- `frontend/src/test/components/Questionnaire.test.jsx` - React Testing Library unit/component tests for mocked questionnaire submission behavior, including normalized `POST /submissions` payload, JWT authorization header, success message, disabled loading submit button, and frontend `maxLength` limits.
+- `frontend/src/test/components/SubmissionsBoard.test.jsx` - React Testing Library tests for mocked backend `GET /submissions` loading, backend field normalization, publisher username rendering, optional goals/constraints rendering, title/description truncation, error display, and frontend filters for looking-for keywords and communication methods. Uses a mocked `SubmissionsContext.Provider` to isolate board behavior from local request/conversation storage.
 - `frontend/src/test/integration/SignUp.integration.test.jsx` - real-backend integration tests for signup success and backend validation error display.
 - `frontend/src/test/integration/AuthFlow.integration.test.jsx` - real-backend integration test for signup, logout, failed login, successful login, route navigation, and logout.
 - `frontend/src/test/integration/QuestionnaireSubmission.integration.test.jsx` - real-backend integration test for signing up, submitting a questionnaire ticket through the frontend, confirming it appears in `GET /submissions`, and deleting it directly with backend `DELETE /submissions/:id` for cleanup because the frontend has no delete-ticket UI yet.
@@ -87,18 +88,22 @@ Frontend:
 
 Backend:
 
-- `backend/src/index.js` - Express entrypoint. Loads dotenv, enables env-configurable CORS and JSON parsing, mounts `/auth` and `/submissions`, responds on `/`, and starts the server. `CORS_ORIGIN` can be set in production to restrict API calls to the deployed frontend origin; if unset, local/dev behavior remains open.
+- `backend/src/index.js` - Express entrypoint. Loads dotenv, enables env-configurable CORS and JSON parsing, mounts `/auth`, `/submissions`, and `/chats`, responds on `/`, and starts the server. `CORS_ORIGIN` can be set in production to restrict API calls to the deployed frontend origin; if unset, local/dev behavior remains open.
 - `backend/src/routes/authRoutes.js` - maps `POST /auth/signup` and `POST /auth/login` to the auth controller.
 - `backend/src/controllers/AuthController.js` - validates signup/login, normalizes username/email, hashes passwords, stores/loads users from PostgreSQL, and returns JWTs. Uses private class helper methods and `AUTH_MESSAGES` constants.
 - `backend/src/middleware/authMiddleware.js` - JWT middleware for protected routes. Expects `Authorization: Bearer <token>`, verifies with `JWT_SECRET`, attaches `req.userId`, and returns `401` for missing/invalid/expired tokens.
 - `backend/src/routes/submissionRoutes.js` - Express router for submissions. Supports public `GET /` for listing submissions, protected `POST /` for creating a submission, and protected `DELETE /:id` for deleting one of the logged-in user's submissions. Future `GET /mine` route is still commented/TODO.
-- `backend/src/controllers/SubmissionController.js` - submissions controller with `create`, `delete`, and `list` implemented using private helper methods and parameterized PostgreSQL queries. `create` uses `req.userId` from JWT middleware plus request body fields matching the submissions table, except database-owned fields such as `id`, `user_id`, and `created_at`. `delete` deletes by submission `id` and `req.userId`, so users cannot delete another user's submission. `list` returns newest submissions first with `limit`/`offset` pagination metadata.
+- `backend/src/controllers/SubmissionController.js` - submissions controller with `create`, `delete`, and `list` implemented using private helper methods and parameterized PostgreSQL queries. `create` uses `req.userId` from JWT middleware plus request body fields matching the submissions table, except database-owned fields such as `id`, `user_id`, and `created_at`. `delete` deletes by submission `id` and `req.userId`, so users cannot delete another user's submission. `list` joins `users`, returns `publisher_username`, and returns newest submissions first with `limit`/`offset` pagination metadata.
+- `backend/src/routes/chatRoutes.js` - Express router for authenticated chat endpoints. Supports creating/finding a chat from a submission, listing the current user's chats, listing messages for one chat, and sending messages.
+- `backend/src/controllers/ChatController.js` - chat controller for backend-persisted direct chats. Uses `req.userId` from JWT middleware, blocks self-chat, stores each pair of users in ordered `user1_id`/`user2_id`, enforces one chat per user pair through the database unique constraint, saves the required first message, and checks that only participants can list/read/send chat messages.
 - `backend/src/db/pool.js` - shared PostgreSQL pool. Requires `DATABASE_URL`. Supports hosted/serverless Postgres deployment by enabling SSL automatically when `DATABASE_URL` includes `sslmode=require`, or explicitly through `DATABASE_SSL=true`; local dev can disable SSL with `DATABASE_SSL=false`. Uses `DATABASE_POOL_MAX` with a default of `5`, plus idle and connection timeouts to avoid wasting database connections on Cloud Run/serverless.
 - `backend/src/models/User.js` - legacy in-memory user shape. Current auth does not use this model.
 - `backend/migrations/001_create_users.sql` - creates `users` table with `id`, unique `username`, unique `email`, `password_hash`, and `created_at`.
 - `backend/migrations/002_create_submissions_board.sql` - creates `submissions` table and indexes for listing/filtering.
+- `backend/migrations/003_create_chats.sql` - creates `chats` and `chat_messages`. `chats` has ordered `user1_id < user2_id`, unique `(user1_id, user2_id)`, `submission_id`, `created_at`, and `updated_at`. `chat_messages` stores one row per message with `chat_id`, `sender_id`, `body`, and `created_at`.
 - `backend/scripts/initDb.js` - loads `backend/.env`, reads all `.sql` files in `backend/migrations`, sorts them by filename, runs them in order, then closes the pool.
 - `backend/test/submissions.test.js` - Node test-runner integration tests for submission create, delete, list, auth, validation errors, and pagination validation. Starts the backend on port `3101`, applies migrations, uses the real PostgreSQL database, and cleans up disposable users.
+- `backend/test/chats.test.js` - Node test-runner integration tests for backend chat creation from a submission, participant chat listing, message exchange, outsider access denial, empty-message rejection, and self-chat rejection. Starts the backend on port `3102`, applies migrations, uses the real PostgreSQL database, and cleans up disposable users.
 - `backend/README_TEST.md` - documents backend test requirements and commands.
 
 ## Routes
@@ -112,7 +117,7 @@ Frontend routes in `frontend/src/App.jsx`:
 - `/questionnaire` - create looking-for-buddy ticket form
 - `/submissions` - browse/filter submissions
 - `/myboard` - user's submissions and sent requests
-- `/chats` - active local chats
+- `/chats` - backend-backed authenticated chats. Supports optional `?chatId=...` to open a specific chat.
 
 Backend routes:
 
@@ -122,6 +127,10 @@ Backend routes:
 - `GET /submissions` - public; returns newest submissions with pagination: `{ submissions, pagination: { limit, offset, count, hasMore } }`. Supports optional `limit` and `offset` query params. Default limit is `20`; max limit is `50`.
 - `POST /submissions` - protected by JWT; creates a submission for the logged-in user.
 - `DELETE /submissions/:id` - protected by JWT; deletes a submission only if it belongs to the logged-in user.
+- `POST /chats` - protected by JWT; body `{ submissionId, message }`; creates or reuses the one chat between the logged-in user and the submission owner, blocks self-chat, requires a non-empty first message, and returns `{ chat, message }`.
+- `GET /chats` - protected by JWT; lists chats where the logged-in user is `user1_id` or `user2_id`, including other user's username, submission title, and latest-message preview.
+- `GET /chats/:id/messages` - protected by JWT; lists messages for one chat only if the logged-in user is a participant. Supports optional `limit` query param. Default limit is `50`; max limit is `100`.
+- `POST /chats/:id/messages` - protected by JWT; sends a non-empty message to a chat only if the logged-in user is a participant.
 - Planned submissions route:
 - `GET /submissions/mine` - protected by JWT; should list submissions created by the logged-in user.
 
@@ -179,7 +188,8 @@ npm run test:submissions
 
 On this Windows setup, PowerShell may block `npm.ps1`; use `npm.cmd` instead, for example `npm.cmd test` and `npm.cmd run test:submissions`.
 
-After the Cloud Run/Neon deployment-prep changes, `cd backend && npm.cmd test` passed with 7/7 backend tests.
+After the backend chat changes, `cd backend && npm.cmd test` passed with 9/9 backend tests.
+After recent frontend text-limit/dashboard changes, `cd frontend && npm.cmd run test -- --run` passed with 23/23 component tests, and `cd frontend && npm.cmd run build` passed. `npm.cmd run lint` still fails on pre-existing unrelated frontend lint issues.
 
 ## Environment Variables
 
@@ -256,6 +266,34 @@ submissions (
 )
 ```
 
+Chats table:
+
+```sql
+chats (
+  id BIGSERIAL PRIMARY KEY,
+  submission_id BIGINT NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
+  user1_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user2_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chats_ordered_users_check CHECK (user1_id < user2_id),
+  CONSTRAINT chats_unique_user_pair UNIQUE (user1_id, user2_id)
+)
+```
+
+Chat messages table:
+
+```sql
+chat_messages (
+  id BIGSERIAL PRIMARY KEY,
+  chat_id BIGINT NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+  sender_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chat_messages_body_not_empty_check CHECK (LENGTH(TRIM(body)) > 0)
+)
+```
+
 Current auth behavior:
 
 - Username is required.
@@ -292,6 +330,14 @@ Submission fields collected by the questionnaire include:
 - `communicationOther`
 - `constraints`
 
+Current frontend input/display limits:
+
+- Questionnaire title: max 30 characters.
+- Questionnaire description, goals, looking-for items, other availability, other communication, and constraints: max 350 characters.
+- Questionnaire other gender: max 30 characters.
+- Submission board displayed title: truncated to 30 characters.
+- Submission board displayed description: truncated to 350 characters.
+
 Request fields include:
 
 - `id`
@@ -309,16 +355,26 @@ Conversation fields include:
 - `messages`
 - `createdAt`
 
+Backend chat fields:
+
+- Chat creation request: `{ submissionId, message }`.
+- Chat records returned by `GET /chats` include chat ids, participant ids, `submission_id`, `submission_title`, `other_user_id`, `other_username`, `last_message_body`, `last_message_created_at`, and timestamps.
+- Message records include `id`, `chat_id`, `sender_id`, `sender_username`, `body`, and `created_at`.
+
 ## Known Gaps And Risks
 
 - Some files contain mojibake/encoding artifacts where dashes, arrows, or ellipses were probably intended.
 - Signup/login store JWTs in `sessionStorage`; normal tab/session close should return the frontend to logged-out state.
-- Backend submissions create/delete/list routes are mounted and covered by backend integration tests. Requests/conversations still have no backend routes.
-- `SubmissionsContext.jsx` uses `localStorage`, so data is per-browser and not shared between real users.
-- `Questionnaire.jsx` now posts submissions to the backend and resets only after a successful response. It still does not add the created submission to local context, and requests/conversations/chats remain local-only.
+- Backend submissions create/delete/list routes and backend chat routes are mounted and covered by backend integration tests. Request accept/decline/cancel workflows still have no backend routes.
+- `SubmissionsContext.jsx` still uses `localStorage` for legacy/local request and conversation state, so My Board request behavior is per-browser and not shared between real users.
+- `Questionnaire.jsx` posts submissions to the backend and resets only after a successful response. It still does not add the created submission to local context.
+- Chat is currently HTTPS + polling every 5 seconds from `frontend/src/components/Chats.jsx`, not realtime WebSockets or SSE.
+- Chat has no accept/decline/block flow yet. A chat starts immediately after `Reach Out` sends the first message.
+- Chats are currently one per user pair, not one per submission. If the same two users connect through multiple submissions, they reuse the same chat.
+- Chat has no unread counts or global left-side chat sidebar yet.
 - `SubmissionsBoard.jsx` uses backend `GET /submissions`, but filtering is still frontend-side against the loaded page of results. Add backend-side filters later for accurate filtering across all submissions.
 - `backend/src/models/User.js` is legacy and may be removable once auth/data model is stable.
-- Frontend has Vitest/React Testing Library component coverage for `Navbar`, `Landing`/`Home`, `Questionnaire`, and `SubmissionsBoard`, plus real-backend integration coverage for signup/auth flows and questionnaire submission creation. Backend has Node test-runner integration coverage for submissions.
+- Frontend has Vitest/React Testing Library component coverage for `Navbar`, `Landing`/`Home`, `Questionnaire`, and `SubmissionsBoard`, plus real-backend integration coverage for signup/auth flows and questionnaire submission creation. Backend has Node test-runner integration coverage for submissions and chats.
 
 ## Development Conventions To Preserve
 
@@ -340,6 +396,9 @@ Conversation fields include:
 - Fix remaining text encoding artifacts in UI strings.
 - Implement `SubmissionController.listMine` and `GET /submissions/mine` with parameterized PostgreSQL queries.
 - Add backend-side filtering/search query params to `GET /submissions`.
-- Add backend tables/routes/controllers for requests, conversations, and messages.
-- Add signup/login rate limiting middleware.
+- Add backend tables/routes/controllers for request accept/decline/cancel workflows if the product returns to explicit connection requests before chat.
+- Add accept/decline/block controls for chats after the first message.
+- Consider a global logged-in chat sidebar by splitting `Chats.jsx` into reusable `ChatSidebar`, `ChatPanel`, and related chat components.
+- Add unread counts and read receipts or last-read tracking.
+- Consider Server-Sent Events or WebSockets later if polling is not enough.
 - Add backend auth tests for signup/login behavior.
