@@ -18,7 +18,6 @@ function Home() {
         <div style={styles.actions}>
           <button style={styles.primary} onClick={() => navigate('/questionnaire')}>Questionnaire</button>
           <button style={styles.primary} onClick={() => navigate('/submissions')}>Submissions</button>
-          <button style={styles.primary} onClick={() => navigate('/myboard')}>My Board</button>
           <button style={styles.primary} onClick={() => navigate('/chats')}>Chats</button>
         </div>
       </section>

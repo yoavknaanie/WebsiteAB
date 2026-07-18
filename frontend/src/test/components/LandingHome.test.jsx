@@ -70,7 +70,7 @@ describe('Landing and home navigation', () => {
 
     expect(screen.getByRole('button', { name: 'Questionnaire' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Submissions' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'My Board' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'My Board' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Chats' })).toBeInTheDocument()
   })
 
@@ -106,23 +106,6 @@ describe('Landing and home navigation', () => {
     await user.click(screen.getByRole('button', { name: 'Submissions' }))
 
     expect(screen.getByRole('heading', { name: 'Submissions page' })).toBeInTheDocument()
-  })
-
-  test('home my board button navigates to my board', async () => {
-    const user = userEvent.setup()
-
-    render(
-      <MemoryRouter initialEntries={['/home']}>
-        <Routes>
-          <Route path="/home" element={<Home />} />
-          <Route path="/myboard" element={<h1>My Board page</h1>} />
-        </Routes>
-      </MemoryRouter>,
-    )
-
-    await user.click(screen.getByRole('button', { name: 'My Board' }))
-
-    expect(screen.getByRole('heading', { name: 'My Board page' })).toBeInTheDocument()
   })
 
   test('home chats button navigates to chats', async () => {

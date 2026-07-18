@@ -4,6 +4,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 
 const POLLING_INTERVAL_MS = 5000
 
+/**
+ * Reads the logged-in user's id from the JWT stored in sessionStorage.
+ * This is only for UI display decisions; backend authorization still uses the token.
+ */
 function getCurrentUserId() {
   const token = sessionStorage.getItem('token')
   if (!token) return null
@@ -19,10 +23,16 @@ function getCurrentUserId() {
   }
 }
 
+/**
+ * Formats backend timestamp strings for display in the chat UI.
+ */
 function formatDate(value) {
   return value ? new Date(value).toLocaleString() : ''
 }
 
+/**
+ * Renders the left-side chat list and notifies the parent when a chat is selected.
+ */
 function ChatSidebar({ chats, activeChatId, onSelectChat }) {
   if (chats.length === 0) {
     return (
@@ -53,9 +63,13 @@ function ChatSidebar({ chats, activeChatId, onSelectChat }) {
   )
 }
 
+/**
+ * Renders the messages for the selected chat and keeps the latest message in view.
+ */
 function ChatMessages({ activeChat, messages, currentUserId, isLoading }) {
   const bottomRef = useRef(null)
 
+  // Scroll after each message update so new messages are visible without manual scrolling.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -96,9 +110,16 @@ function ChatMessages({ activeChat, messages, currentUserId, isLoading }) {
   )
 }
 
+/**
+ * Handles composing and submitting a new message for the active chat.
+ */
 function MessageInput({ disabled, onSend }) {
   const [message, setMessage] = useState('')
 
+  /**
+   * Prevents the browser form submit reload, ignores blank messages,
+   * and sends trimmed message text to the parent component.
+   */
   const handleSubmit = (event) => {
     event.preventDefault()
     const trimmedMessage = message.trim()
@@ -124,6 +145,15 @@ function MessageInput({ disabled, onSend }) {
   )
 }
 
+/**
+ * Main backend-backed chat page.
+ *
+ * Responsibilities:
+ * - Load the current user's chats.
+ * - Select a chat from the URL or default to the first chat.
+ * - Load and poll messages for the active chat.
+ * - Send new messages through the backend API.
+ */
 export default function Chats() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -144,6 +174,10 @@ export default function Chats() {
     [chats, activeChatId],
   )
 
+  /**
+   * Loads all chats for the logged-in user.
+   * If no chat is selected yet, selects the first returned chat and writes it to the URL.
+   */
   const loadChats = useCallback(async () => {
     if (!token) return
 
@@ -174,6 +208,10 @@ export default function Chats() {
     }
   }, [activeChatId, setSearchParams, token])
 
+  /**
+   * Loads messages for one chat from the backend.
+   * When silent is true, polling refreshes without showing the loading state.
+   */
   const loadMessages = useCallback(async (chatId, { silent = false } = {}) => {
     if (!token || !chatId) return
 
@@ -204,6 +242,7 @@ export default function Chats() {
     }
   }, [token])
 
+  // Load the chat list once the page has a token.
   useEffect(() => {
     if (!token) {
       setIsLoadingChats(false)
@@ -213,6 +252,7 @@ export default function Chats() {
     loadChats()
   }, [loadChats, token])
 
+  // Keep React state synchronized when chatId changes in the URL.
   useEffect(() => {
     const chatIdFromUrl = searchParams.get('chatId')
     if (chatIdFromUrl && chatIdFromUrl !== activeChatId) {
@@ -220,6 +260,7 @@ export default function Chats() {
     }
   }, [activeChatId, searchParams])
 
+  // Load messages immediately for the active chat, then poll for updates.
   useEffect(() => {
     if (!activeChatId) {
       setMessages([])
@@ -235,11 +276,18 @@ export default function Chats() {
     return () => window.clearInterval(intervalId)
   }, [activeChatId, loadMessages, token])
 
+  /**
+   * Selects a chat in local state and mirrors the selection into the URL.
+   */
   const selectChat = (chatId) => {
     setActiveChatId(chatId)
     setSearchParams({ chatId })
   }
 
+  /**
+   * Sends a message to the active chat, appends the saved message locally,
+   * and refreshes the chat list so sidebar previews stay current.
+   */
   const sendMessage = async (message) => {
     if (!activeChatId || !token) return
 
