@@ -33,6 +33,7 @@
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const pool = require('../db/pool')
+const userRepository = require('../repositories/UserRepository')
 
 const SALT_ROUNDS = 10
 const USERNAME_MIN_LENGTH = 3
@@ -131,30 +132,6 @@ class AuthController {
     }
   }
 
-  async #isUsernameTaken(username) {
-    const result = await pool.query(
-      'SELECT 1 FROM users WHERE username = $1',
-      [username],
-    )
-    const usernameExists = result.rowCount > 0
-    return usernameExists
-  }
-
-  async #createUser({ username, email, password }) {
-    // Store only the bcrypt hash. Never save the plain password in the database.
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS)
-    const result = await pool.query(
-      `
-        INSERT INTO users (username, email, password_hash)
-        VALUES ($1, $2, $3)
-        RETURNING id, username, email, created_at
-      `,
-      [username, email, hashedPassword],
-    )
-
-    return result.rows[0]
-  }
-
   #createToken(userId) {
     return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' })
   }
@@ -227,11 +204,15 @@ class AuthController {
     }
 
     try {
-      if (await this.#isUsernameTaken(signupInput.username)) {
+      if (await userRepository.isUsernameTaken(signupInput.username)) {
         return res.status(STATUS.CONFLICT).json({ error: AUTH_MESSAGES.USERNAME_TAKEN })
       }
-
-      const newUser = await this.#createUser(signupInput)
+      const passwordHash = await bcrypt.hash(signupInput.password, SALT_ROUNDS)
+      const newUser = await userRepository.create({
+        username: signupInput.username,
+        email: signupInput.email,
+        passwordHash,
+      })
       const token = this.#createToken(newUser.id)
 
       console.log(AUTH_MESSAGES.ACCOUNT_CREATED, {
@@ -281,12 +262,7 @@ class AuthController {
     }
 
     try {
-      const result = await pool.query(
-        'SELECT id, username, email, password_hash FROM users WHERE email = $1',
-        [email],
-      )
-
-      const user = result.rows[0]
+      const user = await userRepository.getUserByEmail(email) // await result.rows[0]
       if (!user) {
         return res.status(STATUS.UNAUTHORIZED).json({ error: AUTH_MESSAGES.INCORRECT_EMAIL_OR_PASSWORD })
       }
