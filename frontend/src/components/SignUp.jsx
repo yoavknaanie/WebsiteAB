@@ -1,3 +1,4 @@
+import Footer from './Footer'
 // export default Signup
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
@@ -54,72 +55,75 @@ function Signup() {
   }
 
   return (
-    <section className="section">
-      <h2>Create your account</h2>
+    <>
+      <section className="section">
+        <h2>Create your account</h2>
 
-      <form onSubmit={handleSubmit}>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+        <form onSubmit={handleSubmit}>
+          {error && <p style={{ color: 'red' }}>{error}</p>}
 
-        <div className="form-field">
-          <label htmlFor="signup-username">Username</label>
-          <input
-            id="signup-username"
-            type="text"
-            required
-            className="form-input"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </div>
-        
-        <div className="form-field">
-          <label htmlFor="signup-email">Email</label>
-          <input
-            id="signup-email"
-            type="email"
-            required
-            className="form-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+          <div className="form-field">
+            <label htmlFor="signup-username">Username</label>
+            <input
+              id="signup-username"
+              type="text"
+              required
+              className="form-input"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          
+          <div className="form-field">
+            <label htmlFor="signup-email">Email</label>
+            <input
+              id="signup-email"
+              type="email"
+              required
+              className="form-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
-        <div className="form-field">
-          <label htmlFor="signup-password">Password</label>
-          <input
-            id="signup-password"
-            type="password"
-            required
-            className="form-input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
+          <div className="form-field">
+            <label htmlFor="signup-password">Password</label>
+            <input
+              id="signup-password"
+              type="password"
+              required
+              className="form-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
 
-        <div className="form-field">
-          <label htmlFor="signup-confirm-password">Confirm Password</label>
-          <input
-            id="signup-confirm-password"
-            type="password"
-            required
-            className="form-input"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-        </div>
+          <div className="form-field">
+            <label htmlFor="signup-confirm-password">Confirm Password</label>
+            <input
+              id="signup-confirm-password"
+              type="password"
+              required
+              className="form-input"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
 
-        <button className="btn" disabled={loading}>
-          {loading ? 'Creating account…' : 'Sign Up'}
-        </button>
-      </form>
+          <button className="btn" disabled={loading}>
+            {loading ? 'Creating account…' : 'Sign Up'}
+          </button>
+        </form>
 
-      <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.95rem' }}>
-        Already have an account?{' '}
-        <Link to="/login" style={{ color: 'var(--sage)', fontWeight: 500 }}>
-          Log in
-        </Link>
-      </p>
-    </section>
+        <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.95rem' }}>
+          Already have an account?{' '}
+          <Link to="/login" style={{ color: 'var(--sage)', fontWeight: 500 }}>
+            Log in
+          </Link>
+        </p>
+      </section>
+      <Footer />
+    </>
   )
 }
 

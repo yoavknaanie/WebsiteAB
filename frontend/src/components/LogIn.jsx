@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import Footer from './Footer'
 
 const SERVER_ERROR = 'Could not connect to the server. Please try again.'
 const LOGIN_ERROR = 'Could not log in. Please try again.'
@@ -51,48 +52,51 @@ function Login() {
   }
 
   return (
-    <section className="section">
-      <h2>Welcome back</h2>
+    <>
+      <section className="section">
+        <h2>Welcome back</h2>
 
-      <form onSubmit={handleSubmit}>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+        <form onSubmit={handleSubmit}>
+          {error && <p style={{ color: 'red' }}>{error}</p>}
 
-        <div className="form-field">
-          <label htmlFor="login-email">Email</label>
-          <input
-            id="login-email"
-            type="email"
-            required
-            className="form-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+          <div className="form-field">
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              required
+              className="form-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
-        <div className="form-field">
-          <label htmlFor="login-password">Password</label>
-          <input
-            id="login-password"
-            type="password"
-            required
-            className="form-input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
+          <div className="form-field">
+            <label htmlFor="login-password">Password</label>
+            <input
+              id="login-password"
+              type="password"
+              required
+              className="form-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
 
-        <button className="btn" disabled={loading}>
-          {loading ? 'Logging in...' : 'Log In'}
-        </button>
+          <button className="btn" disabled={loading}>
+            {loading ? 'Logging in...' : 'Log In'}
+          </button>
 
-        <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.95rem' }}>
-          Don't have an account yet?{' '}
-          <Link to="/signup" style={{ color: 'var(--sage)', fontWeight: 500 }}>
-            Let's set you up
-          </Link>
-        </p>
-      </form>
-    </section>
+          <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.95rem' }}>
+            Don't have an account yet?{' '}
+            <Link to="/signup" style={{ color: 'var(--sage)', fontWeight: 500 }}>
+              Let's set you up
+            </Link>
+          </p>
+        </form>
+      </section>
+      <Footer />
+    </>
   )
 }
 

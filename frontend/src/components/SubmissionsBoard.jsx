@@ -1,3 +1,4 @@
+import Footer from './Footer'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
@@ -264,163 +265,166 @@ function SubmissionsBoard() {
   }
 
   return (
-    <section className="section">
-      <h2>Submissions Board</h2>
+    <>
+      <section className="section">
+        <h2>Submissions Board</h2>
 
-      {isLoadingSubmissions ? (
-        <p>Loading submissions...</p>
-      ) : submissionsError ? (
-        <p>{submissionsError}</p>
-      ) : (!submissions || submissions.length === 0) ? (
-        <p>No submissions yet. Be the first to submit the questionnaire!</p>
-      ) : (
-        <>
-          <div style={{ marginBottom: '1rem', display: 'grid', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <label>
-                Availability:
-                <select value={filterAvailability} onChange={(e) => setFilterAvailability(e.target.value)} style={{ marginLeft: '0.5rem' }}>
-                  <option value="">Any</option>
-                  {availabilityOptions.map((a) => <option key={a} value={a}>{a}</option>)}
-                </select>
-              </label>
+        {isLoadingSubmissions ? (
+          <p>Loading submissions...</p>
+        ) : submissionsError ? (
+          <p>{submissionsError}</p>
+        ) : (!submissions || submissions.length === 0) ? (
+          <p>No submissions yet. Be the first to submit the questionnaire!</p>
+        ) : (
+          <>
+            <div style={{ marginBottom: '1rem', display: 'grid', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <label>
+                  Availability:
+                  <select value={filterAvailability} onChange={(e) => setFilterAvailability(e.target.value)} style={{ marginLeft: '0.5rem' }}>
+                    <option value="">Any</option>
+                    {availabilityOptions.map((a) => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                Age between:
-                <input type="number" placeholder="min" value={ageMin} onChange={(e) => setAgeMin(e.target.value)} style={{ width: '80px' }} />
-                —
-                <input type="number" placeholder="max" value={ageMax} onChange={(e) => setAgeMax(e.target.value)} style={{ width: '80px' }} />
-              </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  Age between:
+                  <input type="number" placeholder="min" value={ageMin} onChange={(e) => setAgeMin(e.target.value)} style={{ width: '80px' }} />
+                  —
+                  <input type="number" placeholder="max" value={ageMax} onChange={(e) => setAgeMax(e.target.value)} style={{ width: '80px' }} />
+                </label>
 
-              <label>
-                Timezone contains:
-                <input value={timezoneSearch} onChange={(e) => setTimezoneSearch(e.target.value)} placeholder="UTC +X" style={{ marginLeft: '0.5rem' }} />
-              </label>
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ marginBottom: '0.25rem' }}>Preferred Communication (must include):</div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {communicationOptions.map((c) => (
-                    <label key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <input type="checkbox" checked={filterComms.includes(c)} onChange={() => toggleComm(c)} />
-                      <small>{c}</small>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ flex: 1 }}>
-                <label>Looking for keywords (comma separated):
-                  <input placeholder="e.g. accountability, study, design" value={filterLookingFor} onChange={(e) => setFilterLookingFor(e.target.value)} style={{ marginLeft: '0.5rem', width: '60%' }} />
+                <label>
+                  Timezone contains:
+                  <input value={timezoneSearch} onChange={(e) => setTimezoneSearch(e.target.value)} placeholder="UTC +X" style={{ marginLeft: '0.5rem' }} />
                 </label>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button type="button" onClick={clearFilters} className="btn">Clear Filters</button>
-                <button type="button" onClick={findBest} className="btn">Find Best Match</button>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ marginBottom: '0.25rem' }}>Preferred Communication (must include):</div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {communicationOptions.map((c) => (
+                      <label key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <input type="checkbox" checked={filterComms.includes(c)} onChange={() => toggleComm(c)} />
+                        <small>{c}</small>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label>Looking for keywords (comma separated):
+                    <input placeholder="e.g. accountability, study, design" value={filterLookingFor} onChange={(e) => setFilterLookingFor(e.target.value)} style={{ marginLeft: '0.5rem', width: '60%' }} />
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button type="button" onClick={clearFilters} className="btn">Clear Filters</button>
+                  <button type="button" onClick={findBest} className="btn">Find Best Match</button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div ref={listRef} className="submissions-list">
-            {filtered.map((s) => {
-              const isBest = bestId === s.id
-              const mySentRequest = requests.find((r) => r.submissionId === s.id && r.fromId === viewerId && r.status === 'pending')
-              const requested = !!mySentRequest
-              const loggedInUserId = getLoggedInUserId()
-              const isOwnSubmission = loggedInUserId && Number(s.ownerId) === Number(loggedInUserId)
-              return (
-                <article
-                  id={`submission-${s.id}`}
-                  key={s.id}
-                  className="card"
-                  style={{
-                    position: 'relative',
-                    paddingBottom: '2.4rem', // room for the action button / composer
-                    border: isBest ? '2px solid var(--sage)' : undefined,
-                    boxShadow: isBest ? '0 6px 18px rgba(0,0,0,0.06)' : undefined
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <strong style={{ overflowWrap: 'anywhere' }}>{truncateText(s.title, TITLE_MAX_LENGTH)}</strong>
-                    <small style={{ color: '#666' }}>{new Date(s.createdAt).toLocaleString()}</small>
-                  </div>
-                  <div style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                    Posted by: {s.publisherUsername || 'Unknown user'}
-                  </div>
-                  <p style={{ margin: '0.5rem 0', overflowWrap: 'anywhere' }}>{truncateText(s.description)}</p>
-                  <div style={{ fontSize: '0.95rem', color: '#333', overflowWrap: 'anywhere' }}>
-                    {s.goals && <div>Goals: {s.goals}</div>}
-                    <div>Age: {s.age}</div>
-                    <div>Gender: {s.gender === 'Other' ? s.otherGender : s.gender}</div>
-                    <div>Availability: {s.availability === 'Other' ? s.otherAvailability : s.availability}</div>
-                    <div>Communication: {Array.isArray(s.communication) ? s.communication.join(', ') : s.communication}</div>
-                    {s.constraints && (
-                      <div>Availability and Communication Constraints: {s.constraints}</div>
-                    )}
-                    <div>Looking for: {Array.isArray(s.lookingFor) ? s.lookingFor.filter(Boolean).join(', ') : s.lookingFor}</div>
-                    <div>Timezone: {s.timezone}</div>
-                  </div>
-                  <div style={{ position: 'absolute', right: '12px', bottom: '12px' }}>
-                    {isOwnSubmission ? (
-                      <button type="button" className="btn" disabled>
-                        Your Submission
-                      </button>
-                    ) : openComposerId === s.id ? (
-                      <Composer
-                        onSend={(msg) => requestConnection(s.id, msg)}
-                        onCancel={() => setOpenComposerId(null)}
-                        initialMessage={mySentRequest?.message || ''}
-                      />
-                    ) : openCancelId === s.id ? (
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        
+            <div ref={listRef} className="submissions-list">
+              {filtered.map((s) => {
+                const isBest = bestId === s.id
+                const mySentRequest = requests.find((r) => r.submissionId === s.id && r.fromId === viewerId && r.status === 'pending')
+                const requested = !!mySentRequest
+                const loggedInUserId = getLoggedInUserId()
+                const isOwnSubmission = loggedInUserId && Number(s.ownerId) === Number(loggedInUserId)
+                return (
+                  <article
+                    id={`submission-${s.id}`}
+                    key={s.id}
+                    className="card"
+                    style={{
+                      position: 'relative',
+                      paddingBottom: '2.4rem', // room for the action button / composer
+                      border: isBest ? '2px solid var(--sage)' : undefined,
+                      boxShadow: isBest ? '0 6px 18px rgba(0,0,0,0.06)' : undefined
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <strong style={{ overflowWrap: 'anywhere' }}>{truncateText(s.title, TITLE_MAX_LENGTH)}</strong>
+                      <small style={{ color: '#666' }}>{new Date(s.createdAt).toLocaleString()}</small>
+                    </div>
+                    <div style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                      Posted by: {s.publisherUsername || 'Unknown user'}
+                    </div>
+                    <p style={{ margin: '0.5rem 0', overflowWrap: 'anywhere' }}>{truncateText(s.description)}</p>
+                    <div style={{ fontSize: '0.95rem', color: '#333', overflowWrap: 'anywhere' }}>
+                      {s.goals && <div>Goals: {s.goals}</div>}
+                      <div>Age: {s.age}</div>
+                      <div>Gender: {s.gender === 'Other' ? s.otherGender : s.gender}</div>
+                      <div>Availability: {s.availability === 'Other' ? s.otherAvailability : s.availability}</div>
+                      <div>Communication: {Array.isArray(s.communication) ? s.communication.join(', ') : s.communication}</div>
+                      {s.constraints && (
+                        <div>Availability and Communication Constraints: {s.constraints}</div>
+                      )}
+                      <div>Looking for: {Array.isArray(s.lookingFor) ? s.lookingFor.filter(Boolean).join(', ') : s.lookingFor}</div>
+                      <div>Timezone: {s.timezone}</div>
+                    </div>
+                    <div style={{ position: 'absolute', right: '12px', bottom: '12px' }}>
+                      {isOwnSubmission ? (
+                        <button type="button" className="btn" disabled>
+                          Your Submission
+                        </button>
+                      ) : openComposerId === s.id ? (
+                        <Composer
+                          onSend={(msg) => requestConnection(s.id, msg)}
+                          onCancel={() => setOpenComposerId(null)}
+                          initialMessage={mySentRequest?.message || ''}
+                        />
+                      ) : openCancelId === s.id ? (
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          
+                          <button
+                            type="button"
+                            className="btn"
+                            onClick={() => {
+                              // cancel the viewer's sent request for this submission
+                              console.log('[SubmissionsBoard] cancel clicked for', mySentRequest?.id)
+                              if (mySentRequest) {
+                                const ok = cancelRequest(mySentRequest.id)
+                                if (ok) toast.success('Request cancelled')
+                                else toast.error('Failed to cancel')
+                              }
+                              setOpenCancelId(null)
+                            }}
+                          >
+                            Cancel Request
+                          </button>
+                          <button type="button" className="btn" onClick={() => setOpenCancelId(null)}>Keep</button>
+                        </div>
+                      ) : (
                         <button
                           type="button"
                           className="btn"
+                          disabled={sendingChatId === s.id}
                           onClick={() => {
-                            // cancel the viewer's sent request for this submission
-                            console.log('[SubmissionsBoard] cancel clicked for', mySentRequest?.id)
-                            if (mySentRequest) {
-                              const ok = cancelRequest(mySentRequest.id)
-                              if (ok) toast.success('Request cancelled')
-                              else toast.error('Failed to cancel')
+                            if (requested) {
+                              // open cancel confirmation
+                              setOpenCancelId(s.id)
+                              setOpenComposerId(null)
+                            } else {
+                              openComposer(s.id)
                             }
-                            setOpenCancelId(null)
                           }}
                         >
-                          Cancel Request
+                          {sendingChatId === s.id ? 'Sending...' : requested ? 'Request Sent' : 'Reach Out'}
                         </button>
-                        <button type="button" className="btn" onClick={() => setOpenCancelId(null)}>Keep</button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={sendingChatId === s.id}
-                        onClick={() => {
-                          if (requested) {
-                            // open cancel confirmation
-                            setOpenCancelId(s.id)
-                            setOpenComposerId(null)
-                          } else {
-                            openComposer(s.id)
-                          }
-                        }}
-                      >
-                        {sendingChatId === s.id ? 'Sending...' : requested ? 'Request Sent' : 'Reach Out'}
-                      </button>
-                    )}
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        </>
-      )}
-    </section>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </section>
+      <Footer />
+    </>
   )
 }
 
