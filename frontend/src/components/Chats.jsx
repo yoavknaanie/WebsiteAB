@@ -1,3 +1,4 @@
+import Footer from './Footer'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -319,48 +320,54 @@ export default function Chats() {
 
   if (!token) {
     return (
-      <section className="section">
-        <h2>Your Chats</h2>
-        <p>Please log in to view your chats.</p>
-        <button type="button" className="btn" onClick={() => navigate('/login')}>
-          Log In
-        </button>
-      </section>
+      <>
+        <section className="section">
+          <h2>Your Chats</h2>
+          <p>Please log in to view your chats.</p>
+          <button type="button" className="btn" onClick={() => navigate('/login')}>
+            Log In
+          </button>
+        </section>
+        <Footer />
+      </>
     )
   }
 
   return (
-    <section className="section">
-      <h2>Your Chats</h2>
-
-      {isLoadingChats ? (
-        <p>Loading chats...</p>
-      ) : chatsError ? (
-        <p>{chatsError}</p>
-      ) : (
-        <div style={styles.chatShell}>
-          <ChatSidebar chats={chats} activeChatId={activeChatId} onSelectChat={selectChat} />
-
-          <main style={styles.chatPanel}>
-            <header style={styles.chatHeader}>
-              <strong>{activeChat?.other_username || 'Conversation'}</strong>
-              <span>{activeChat?.submission_title || ''}</span>
-            </header>
-
-            {messagesError && <p style={styles.errorText}>{messagesError}</p>}
-
-            <ChatMessages
-              activeChat={activeChat}
-              messages={messages}
-              currentUserId={currentUserId}
-              isLoading={isLoadingMessages}
-            />
-
-            <MessageInput disabled={!activeChat || isSending} onSend={sendMessage} />
-          </main>
-        </div>
-      )}
-    </section>
+    <>
+      <section className="section">
+        <h2>Your Chats</h2>
+  
+        {isLoadingChats ? (
+          <p>Loading chats...</p>
+        ) : chatsError ? (
+          <p>{chatsError}</p>
+        ) : (
+          <div style={styles.chatShell}>
+            <ChatSidebar chats={chats} activeChatId={activeChatId} onSelectChat={selectChat} />
+  
+            <main style={styles.chatPanel}>
+              <header style={styles.chatHeader}>
+                <strong>{activeChat?.other_username || 'Conversation'}</strong>
+                <span>{activeChat?.submission_title || ''}</span>
+              </header>
+  
+              {messagesError && <p style={styles.errorText}>{messagesError}</p>}
+  
+              <ChatMessages
+                activeChat={activeChat}
+                messages={messages}
+                currentUserId={currentUserId}
+                isLoading={isLoadingMessages}
+              />
+  
+              <MessageInput disabled={!activeChat || isSending} onSend={sendMessage} />
+            </main>
+          </div>
+        )}
+      </section>
+      <Footer />
+    </>
   )
 }
 

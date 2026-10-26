@@ -1,3 +1,4 @@
+import Footer from './Footer'
 import { useNavigate } from 'react-router-dom'
 import HowItWorks from './HowItWorks'
 
@@ -23,6 +24,7 @@ function Home() {
       </section>
 
       <HowItWorks />
+      <Footer />
     </>
   )
 }

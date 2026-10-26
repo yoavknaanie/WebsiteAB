@@ -1,3 +1,4 @@
+import Footer from './Footer'
 
 
 // export default Questionnaire
@@ -201,215 +202,218 @@ function Questionnaire() {
 
   // ------------------- RENDER -------------------
   return (
-    <section id="questionnaire" className="section">
-      <h2>Looking for a Buddy Questionnaire</h2>
+    <>
+      <section id="questionnaire" className="section">
+        <h2>Looking for a Buddy Questionnaire</h2>
 
-      <form onSubmit={handleSubmit}>
-        {/* Age + Gender */}
-        <div className="row">
+        <form onSubmit={handleSubmit}>
+          {/* Age + Gender */}
+          <div className="row">
+            <div className="form-field">
+              <label htmlFor="age">Age<span className="req">*</span></label>
+              <input type="number" id="age" name="age" value={formData.age} onChange={handleChange} 
+                min={18} max={100} required className="form-input"
+              />
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="gender">Gender<span className="req">*</span></label>
+              <select id="gender" name="gender" value={formData.gender} onChange={handleChange} 
+                required className="form-select"
+              >
+                <option value="">Select Gender</option>
+                <option value="M">M</option>
+                <option value="F">F</option>
+                <option value="Other">Other</option>
+              </select>
+
+              {formData.gender === 'Other' && (
+                <div style={{ marginTop: 8 }}>
+                  <input id="otherGender" type="text" name="otherGender" placeholder="Please specify" 
+                    value={formData.otherGender} onChange={handleChange} required maxLength={OTHER_GENDER_MAX_LENGTH} className="form-input"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Timezone: keep display same (readOnly) but provide an optional dropdown to change it */}
           <div className="form-field">
-            <label htmlFor="age">Age<span className="req">*</span></label>
-            <input type="number" id="age" name="age" value={formData.age} onChange={handleChange} 
-              min={18} max={100} required className="form-input"
+            <label htmlFor="timezone">Timezone</label>
+            <input type="text" id="timezone" name="timezone" value={formData.timezone} readOnly className="form-input" />
+
+            <div style={{ marginTop: 8 }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', color: '#444', marginBottom: 6 }}>Change timezone (optional)</label>
+              <select id="timezone-select" name="timezone" value={formData.timezone} onChange={handleChange} className="form-select">
+                <option value={detected}>{detected} (detected)</option>
+                {timezoneOptions.map((t) => {
+                  const val = `UTC ${t.key}`
+                  const detected = getUTCOffset()
+                  const label = `${val} - ${t.cities.join(', ')}${detected === val ? ' (detected)' : ''}`
+                  return <option key={t.key} value={val}>{label}</option>
+                })}
+              </select>
+              <div style={{ color: '#666', fontSize: '0.9rem', marginTop: 6 }}>
+                If your city isn't listed, pick the nearest UTC offset. Selecting an option will update the timezone shown above.
+              </div>
+            </div>
+          </div>
+
+          {/* Title */}
+          <div className="form-field">
+            <label htmlFor="title">Title<span className="req">*</span></label>
+            <input type="text" id="title" name="title" placeholder={titlePlaceholder} 
+              value={formData.title} onChange={handleChange} required maxLength={TITLE_MAX_LENGTH} className="form-input"
             />
           </div>
 
+          {/* Description */}
           <div className="form-field">
-            <label htmlFor="gender">Gender<span className="req">*</span></label>
-            <select id="gender" name="gender" value={formData.gender} onChange={handleChange} 
-              required className="form-select"
+            <label htmlFor="description">Description</label>
+            <textarea id="description" name="description" value={formData.description}
+              onChange={handleChange} maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea"
+            />
+          </div>
+
+          {/* Goals */}
+          <div className="form-field">
+            <label htmlFor="goals">Goals</label>
+            <textarea id="goals" name="goals" value={formData.goals} onChange={handleChange}
+              maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea"
+            />
+          </div>
+
+          {/* Looking for in a Buddy */}
+          <div className="form-field">
+            <label>Looking for in a Buddy (up to 5):</label>
+            {formData.lookingFor.map((item, i) => (
+              <input key={i} type="text" placeholder={`#${i + 1}`} value={item}
+                onChange={(e) => handleLookingForChange(i, e.target.value)} maxLength={TEXT_FIELD_MAX_LENGTH} className="form-input"
+              />
+            ))}
+          </div>
+
+          {/* Availability */}
+          <div className="form-field">
+            <label htmlFor="availability">Availability<span className="req">*</span></label>
+            <select id="availability" name="availability" required value={formData.availability}
+              onChange={handleChange} className="form-select"
             >
-              <option value="">Select Gender</option>
-              <option value="M">M</option>
-              <option value="F">F</option>
-              <option value="Other">Other</option>
+              <option value="">Select Availability</option>
+              {availabilityOptions.map((a) => (
+                <option key={a} value={a}>{a}</option>
+              ))}
             </select>
 
-            {formData.gender === 'Other' && (
+            {formData.availability === 'Other' && (
+              <textarea name="otherAvailability" value={formData.otherAvailability}
+                onChange={handleChange} placeholder="Please describe your availability"
+                maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea" style={{ minHeight: '70px' }}
+              />
+            )}
+          </div>
+
+          {/* Communication */}
+          <div className="form-field">
+            <label>Preferred Communication<span className="req">*</span></label>
+            <div className="checkbox-group">
+              {communicationOptions.map((option) => (
+                <label key={option.label}>
+                  <input type="checkbox" name="communication" value={option.label}
+                    checked={formData.communication.includes(option.label)}
+                    onChange={handleChange}
+                  />
+                  <span className="tooltip">
+                    {option.label}
+                    {option.info && <span className="info-icon">i</span>}
+                    {option.info && <span className="tooltip-text">{option.info}</span>}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {formData.communication.includes('Other') && (
               <div style={{ marginTop: 8 }}>
-                <input id="otherGender" type="text" name="otherGender" placeholder="Please specify" 
-                  value={formData.otherGender} onChange={handleChange} required maxLength={OTHER_GENDER_MAX_LENGTH} className="form-input"
+                <label htmlFor="communicationOther">Please specify <span className="req">*</span></label>
+                <input id="communicationOther" type="text" name="communicationOther" value={formData.communicationOther}
+                  onChange={handleChange} placeholder="Please specify other communication methods"
+                  required maxLength={TEXT_FIELD_MAX_LENGTH} className="form-input"
                 />
               </div>
             )}
+
+            {errors.communication && <div style={{ color: '#d32f2f', marginTop: 6 }}>{errors.communication}</div>}
           </div>
-        </div>
 
-        {/* Timezone: keep display same (readOnly) but provide an optional dropdown to change it */}
-        <div className="form-field">
-          <label htmlFor="timezone">Timezone</label>
-          <input type="text" id="timezone" name="timezone" value={formData.timezone} readOnly className="form-input" />
-
-          <div style={{ marginTop: 8 }}>
-            <label style={{ display: 'block', fontSize: '0.9rem', color: '#444', marginBottom: 6 }}>Change timezone (optional)</label>
-            <select id="timezone-select" name="timezone" value={formData.timezone} onChange={handleChange} className="form-select">
-              <option value={detected}>{detected} (detected)</option>
-              {timezoneOptions.map((t) => {
-                const val = `UTC ${t.key}`
-                const detected = getUTCOffset()
-                const label = `${val} - ${t.cities.join(', ')}${detected === val ? ' (detected)' : ''}`
-                return <option key={t.key} value={val}>{label}</option>
-              })}
-            </select>
-            <div style={{ color: '#666', fontSize: '0.9rem', marginTop: 6 }}>
-              If your city isn't listed, pick the nearest UTC offset. Selecting an option will update the timezone shown above.
-            </div>
-          </div>
-        </div>
-
-        {/* Title */}
-        <div className="form-field">
-          <label htmlFor="title">Title<span className="req">*</span></label>
-          <input type="text" id="title" name="title" placeholder={titlePlaceholder} 
-            value={formData.title} onChange={handleChange} required maxLength={TITLE_MAX_LENGTH} className="form-input"
-          />
-        </div>
-
-        {/* Description */}
-        <div className="form-field">
-          <label htmlFor="description">Description</label>
-          <textarea id="description" name="description" value={formData.description}
-            onChange={handleChange} maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea"
-          />
-        </div>
-
-        {/* Goals */}
-        <div className="form-field">
-          <label htmlFor="goals">Goals</label>
-          <textarea id="goals" name="goals" value={formData.goals} onChange={handleChange}
-            maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea"
-          />
-        </div>
-
-        {/* Looking for in a Buddy */}
-        <div className="form-field">
-          <label>Looking for in a Buddy (up to 5):</label>
-          {formData.lookingFor.map((item, i) => (
-            <input key={i} type="text" placeholder={`#${i + 1}`} value={item}
-              onChange={(e) => handleLookingForChange(i, e.target.value)} maxLength={TEXT_FIELD_MAX_LENGTH} className="form-input"
-            />
-          ))}
-        </div>
-
-        {/* Availability */}
-        <div className="form-field">
-          <label htmlFor="availability">Availability<span className="req">*</span></label>
-          <select id="availability" name="availability" required value={formData.availability}
-            onChange={handleChange} className="form-select"
-          >
-            <option value="">Select Availability</option>
-            {availabilityOptions.map((a) => (
-              <option key={a} value={a}>{a}</option>
-            ))}
-          </select>
-
-          {formData.availability === 'Other' && (
-            <textarea name="otherAvailability" value={formData.otherAvailability}
-              onChange={handleChange} placeholder="Please describe your availability"
-              maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea" style={{ minHeight: '70px' }}
-            />
-          )}
-        </div>
-
-        {/* Communication */}
-        <div className="form-field">
-          <label>Preferred Communication<span className="req">*</span></label>
-          <div className="checkbox-group">
-            {communicationOptions.map((option) => (
-              <label key={option.label}>
-                <input type="checkbox" name="communication" value={option.label}
-                  checked={formData.communication.includes(option.label)}
-                  onChange={handleChange}
+          {/* Constraints Switch */}
+          <div className="form-field">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              Availability and Communication Constraints
+              <div className="switch-wrapper">
+                <input
+                  type="checkbox"
+                  checked={hasConstraints}
+                  onChange={(e) => setHasConstraints(e.target.checked)}
+                  className="switch-input"
                 />
-                <span className="tooltip">
-                  {option.label}
-                  {option.info && <span className="info-icon">i</span>}
-                  {option.info && <span className="tooltip-text">{option.info}</span>}
-                </span>
-              </label>
-            ))}
-          </div>
-
-          {formData.communication.includes('Other') && (
-            <div style={{ marginTop: 8 }}>
-              <label htmlFor="communicationOther">Please specify <span className="req">*</span></label>
-              <input id="communicationOther" type="text" name="communicationOther" value={formData.communicationOther}
-                onChange={handleChange} placeholder="Please specify other communication methods"
-                required maxLength={TEXT_FIELD_MAX_LENGTH} className="form-input"
-              />
-            </div>
-          )}
-
-          {errors.communication && <div style={{ color: '#d32f2f', marginTop: 6 }}>{errors.communication}</div>}
-        </div>
-
-        {/* Constraints Switch */}
-        <div className="form-field">
-          <label style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            Availability and Communication Constraints
-            <div className="switch-wrapper">
-              <input
-                type="checkbox"
-                checked={hasConstraints}
-                onChange={(e) => setHasConstraints(e.target.checked)}
-                className="switch-input"
-              />
-              <span
-                className="switch-slider"
-                style={{
-                  backgroundColor: hasConstraints ? 'var(--sage)' : '#ccc'
-                }}
-              >
                 <span
-                  className="switch-knob"
+                  className="switch-slider"
                   style={{
-                    transform: hasConstraints ? 'translateX(22px)' : 'translateX(0)'
+                    backgroundColor: hasConstraints ? 'var(--sage)' : '#ccc'
                   }}
-                />
-              </span>
+                >
+                  <span
+                    className="switch-knob"
+                    style={{
+                      transform: hasConstraints ? 'translateX(22px)' : 'translateX(0)'
+                    }}
+                  />
+                </span>
+              </div>
+            </label>
+            
+
+            {hasConstraints && (
+              <textarea id="constraints" name="constraints" value={formData.constraints} 
+                onChange={handleChange} placeholder="Please write here your constraints" 
+                maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea"
+              />
+            )}
+          </div>
+
+          {/* Submit Button */}
+          <button type="submit" className="btn" disabled={loading}>
+            {loading ? 'Submitting...' : 'Submit'}
+          </button>
+
+          {successMessage && (
+            <div style={{ color: 'green', marginTop: 12 }}>
+              {successMessage}
             </div>
-          </label>
-          
-
-          {hasConstraints && (
-            <textarea id="constraints" name="constraints" value={formData.constraints} 
-              onChange={handleChange} placeholder="Please write here your constraints" 
-              maxLength={TEXT_FIELD_MAX_LENGTH} className="form-textarea"
-            />
           )}
-        </div>
+        </form>
 
-        {/* Submit Button */}
-        <button type="submit" className="btn" disabled={loading}>
-          {loading ? 'Submitting...' : 'Submit'}
-        </button>
-
-        {successMessage && (
-          <div style={{ color: 'green', marginTop: 12 }}>
-            {successMessage}
+        {/* Submissions */}
+        {submissions.length > 0 && (
+          <div className="submissions">
+            <h3>My Submissions</h3>
+            {submissions.map((sub, index) => (
+              <div key={index} className="card">
+                <strong>{sub.title}</strong> - {sub.description} <br />
+                Age: {sub.age}, Gender: {sub.gender === 'Other' ? sub.otherGender : sub.gender} <br />
+                Goals: {sub.goals} <br />
+                Looking for: {sub.lookingFor.filter(Boolean).join(', ')} <br />
+                Availability: {sub.availability === 'Other' ? sub.otherAvailability : sub.availability} <br />
+                Communication: {sub.communication.join(', ')} <br />
+                Constraints: {sub.constraints} <br />
+                Timezone: {sub.timezone}
+              </div>
+            ))}
           </div>
         )}
-      </form>
-
-      {/* Submissions */}
-      {submissions.length > 0 && (
-        <div className="submissions">
-          <h3>My Submissions</h3>
-          {submissions.map((sub, index) => (
-            <div key={index} className="card">
-              <strong>{sub.title}</strong> - {sub.description} <br />
-              Age: {sub.age}, Gender: {sub.gender === 'Other' ? sub.otherGender : sub.gender} <br />
-              Goals: {sub.goals} <br />
-              Looking for: {sub.lookingFor.filter(Boolean).join(', ')} <br />
-              Availability: {sub.availability === 'Other' ? sub.otherAvailability : sub.availability} <br />
-              Communication: {sub.communication.join(', ')} <br />
-              Constraints: {sub.constraints} <br />
-              Timezone: {sub.timezone}
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
+      </section>
+      <Footer />
+    </>
   )
 }
 
